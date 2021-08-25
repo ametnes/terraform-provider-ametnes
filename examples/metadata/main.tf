@@ -13,10 +13,15 @@ variable "location_name" {
 }
 
 data "ametnes_locations" "all" {}
+data "ametnes_kinds" "all" {}
 
 # Returns all locations
 output "locations" {
   value = data.ametnes_locations.all.locations
+}
+
+output "kinds" {
+  value = data.ametnes_kinds.all.kinds
 }
 
 # Only returns packer spiced latte
