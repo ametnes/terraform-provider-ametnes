@@ -63,3 +63,5 @@ override.tf.json
 terraform.rc
 terraform
 .terraform*
+
+terraform-provider-ametnes

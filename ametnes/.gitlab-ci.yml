@@ -1,0 +1,5 @@
+image: golang:1.15
+
+stages:
+  - test
+
