@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient(t *testing.T) {
@@ -20,7 +22,7 @@ func TestClient(t *testing.T) {
 	client := GetTestClient(t)
 	list, err := client.GetProjects()
 	t.Log(list)
-	t.Log(err)
+	assert.Nil(t, err)
 
 }
 

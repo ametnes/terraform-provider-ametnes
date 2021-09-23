@@ -2,149 +2,185 @@ package ametnes
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const DefaultProductCode = 3795211474
+
 func resourceService() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceServiceCreate,
 		ReadContext:   resourceServiceRead,
-		UpdateContext: resourceServiceUpdate,
 		DeleteContext: resourceServiceDelete,
+
 		Schema: map[string]*schema.Schema{
-			"items": &schema.Schema{
-				Type:     schema.TypeList,
+
+			"project_name": {
+				Type:     schema.TypeString,
 				Required: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": &schema.Schema{
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"name": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"kind": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"location": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"description": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"network": &schema.Schema{
-							Type:     schema.TypeInt,
-							Computed: true,
-						},
-					},
-				},
+				ForceNew: true, // if the project name changes then we need to force new resource
+			},
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true, // if the name changes the we need to create a new resource
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"kind": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"product_code": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  DefaultProductCode,
+			},
+			"location": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+
+			"cpu": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+
+			"memory": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+			"storage": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+			"nodes": {
+				Type:     schema.TypeInt,
+				Required: true,
+			},
+
+			// computed
+			"network": {
+				Type:     schema.TypeInt,
+				Computed: true,
+			},
+			"status": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"account": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
 }
 
 func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// ...
-	var diags diag.Diagnostics
-	return diags
+
+	client := m.(*Client)
+
+	projects, err := client.GetProjects()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	projectID := -1
+	projectName := d.Get("project_name").(string)
+
+	for _, project := range projects {
+		if project.Name == projectName {
+			projectID = project.Id
+			break
+		}
+	}
+	if projectID == -1 {
+		return diag.Errorf("Cannot find your project with name %s", projectName)
+	}
+
+	description := ""
+
+	if desc, ok := d.GetOk("description"); ok {
+		description = desc.(string)
+	}
+	service, err := client.CreateResource(Resource{
+		Project:     projectID,
+		Kind:        d.Get("kind").(string),
+		Location:    d.Get("location").(string),
+		Name:        d.Get("name").(string),
+		Product:     d.Get("product_code").(int),
+		Description: description,
+		Spec: Spec{
+			Components: map[string]interface{}{
+				"cpu":     d.Get("cpu").(int),
+				"storage": d.Get("storage").(int),
+				"memory":  d.Get("memory").(int),
+			},
+			Nodes: d.Get("nodes").(int),
+		},
+	},
+	)
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	// Identity function
+	d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
+	return nil
 }
 
 func resourceServiceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// ...
-	// client := &http.Client{Timeout: 10 * time.Second}
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
+	client := m.(*Client)
 
-	// req, err := http.NewRequest("GET", fmt.Sprintf("%s/projects/%s/resources/%s", "https://api-test.cloud.ametnes.com/v1"), nil)
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	ids := strings.Split(d.Id(), "/")
 
-	// client, err := NewClient(&host, &username, &token)
+	projectID, err := strconv.Atoi(ids[0])
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	resourceID, err := strconv.Atoi(ids[1])
 
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// projects, err := client.GetProjects()
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
-	// if len(projects) == 0 {
-	// 	return diag.FromErr(err)
-	// }
-	// project := projects[0]
+	resource, err := client.GetResource(projectID, resourceID)
+	if err != nil {
+		// if we get error while getting resource then
+		d.SetId("")
+		return nil
+	}
+	d.Set("network", resource.Network)
+	d.Set("status", resource.Status)
+	d.Set("account", resource.Account)
 
-	// resource := Resource{
-	// 	Name:     "Test Resource 6",
-	// 	Project:  project.Id,
-	// 	Account:  project.Account,
-	// 	Kind:     "service/mysql:8.0",
-	// 	Location: "gcp/europe-west2",
-	// }
-
-	// n_resource, err := client.CreateResource(resource)
-
-	// r, err := client.Do(req)
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
-	// defer r.Body.Close()
-
-	// var kinds map[string]interface{}
-	// err = json.NewDecoder(r.Body).Decode(&kinds)
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
-
-	// m_kinds := make([]interface{}, len(kinds["results"].([]interface{})))
-	// for idx, __kind := range kinds["results"].([]interface{}) {
-	// 	kind := __kind.(map[string]interface{})
-	// 	_kind := make(map[string]interface{})
-	// 	_kind["id"] = kind["id"]
-	// 	_kind["name"] = kind["name"]
-	// 	_kind["type"] = kind["type"]
-	// 	_kind["enabled"] = kind["enabled"]
-	// 	_kind["release"] = kind["release"]
-	// 	_kind["locations"] = kind["locations"]
-	// 	_kind["kind"] = kind["kind"]
-
-	// 	limits := make([]interface{}, 1)
-	// 	limits[0] = kind["limits"]
-	// 	_kind["limits"] = limits
-
-	// 	backups := make([]interface{}, 1)
-	// 	backups[0] = kind["backups"]
-	// 	_kind["backups"] = backups
-
-	// 	_kind["tools"] = nil
-
-	// 	m_kinds[idx] = _kind
-	// }
-
-	// if err := d.Set("kinds", m_kinds); err != nil {
-	// 	return diag.FromErr(err)
-	// }
-
-	return diags
-}
-
-func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// ...
-	var diags diag.Diagnostics
-	return diags
+	return nil
 }
 
 func resourceServiceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// ...
-	var diags diag.Diagnostics
-	return diags
+	client := m.(*Client)
+
+	ids := strings.Split(d.Id(), "/")
+
+	projectID, err := strconv.Atoi(ids[0])
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	resourceID, err := strconv.Atoi(ids[1])
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diag.FromErr(client.DeleteResource(Resource{
+		Project: projectID,
+		Id:      resourceID,
+	}))
 }

@@ -1,18 +1,23 @@
 package ametnes
 
 type Resource struct {
-	Id          int                    `json:"id,omitempty"`
-	Project     int                    `json:"project,omitempty"`
-	Account     int                    `json:"account,omitempty"`
-	Kind        string                 `json:"kind,omitempty"`
-	Location    string                 `json:"location,omitempty"`
-	Network     int                    `json:"network,omitempty"`
-	Name        string                 `json:"name,omitempty"`
-	Status      string                 `json:"status,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Spec        map[string]interface{} `json:"spec,omitempty"`
+	Id          int    `json:"id,omitempty"`
+	Project     int    `json:"project,omitempty"`
+	Account     int    `json:"account,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Location    string `json:"location,omitempty"`
+	Network     int    `json:"network,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Status      string `json:"status,omitempty"`
+	Description string `json:"description,omitempty"`
+	Product     int    `json:"product,omitempty"`
+	Spec        Spec   `json:"spec,omitempty"`
 }
 
+type Spec struct {
+	Components map[string]interface{} `json:"components,omitempty"`
+	Nodes      int                    `json:"nodes:omitempty"`
+}
 type Resources struct {
 	Count int        `json:"count,omitempty"`
 	Items []Resource `json:"results,omitempty"`

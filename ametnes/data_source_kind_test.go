@@ -3,7 +3,6 @@ package ametnes
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -42,7 +41,6 @@ func TestKindData(t *testing.T) {
 	resource := dataSourceKinds()
 	resourceData := schema.TestResourceDataRaw(t, resource.Schema, nil)
 	diag := dataSourceKindsRead(context.TODO(), resourceData, nil)
-	fmt.Printf("%+v\n", diag)
 	if diag.HasError() {
 		t.Fail()
 	}
