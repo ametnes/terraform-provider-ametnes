@@ -6,10 +6,6 @@ import (
 	"testing"
 )
 
-var Host = "https://api-test.cloud.ametnes.com/v1"
-var UserName = "Brave.Microphone@ametnes.com"
-var Token = "1z8a41c24dc2e341TG9qPn5r2k;_6Q6A56G31j970d6b}wq7t@fDco"
-
 func TestClient(t *testing.T) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	// resource := dataSourceKinds()
@@ -17,13 +13,25 @@ func TestClient(t *testing.T) {
 	// diag := dataSourceKindsRead(context.TODO(), resourceData, nil)
 	// fmt.Printf("%+v\n", diag)
 
-	// host := "https://api-test.cloud.ametnes.com/v1"
-	// username := "Brave.Microphone@ametnes"
-	// token := "2au\\a0d1ecm584719Ufmd8b999eYRNxV04e2478!jHUi947H37mC3"
+	// host := "https://cloud.ametnes.com/api"
+	// username := "Brave.Microphone@ametnes.com"
+	// token := "2eh,.Uc983QeAfeb<1cT3oeum34SaD7u0(b2dc&-E53acc2ic62y1"
 
-	// // client, err := NewClient(&host, &username, &token)
+	client := GetTestClient(t)
+	list, err := client.GetProjects()
+	t.Log(list)
+	t.Log(err)
 
-	// // if err != nil {
-	// // 	t.Fail()
-	// // }
+}
+
+func GetTestClient(t *testing.T) *Client {
+	host := "https://cloud.ametnes.com/api"
+	client, err := NewClient(host, Token{
+		Type:  Bearer,
+		Token: "YR7gASZaRCgJ3Evf78N5kz3oCDUwlJYoaunj7EEc8HV8S5ypm9hmhaH1IQRyMM1K1L6XSJKbuxevfyriSwvDPMxgZXUbWqgbxofKL9XgpSV800ou5cI9juwHivVwSPAe",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return client
 }

@@ -10,15 +10,8 @@ import (
 
 func TestGetResources(t *testing.T) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	// host := "https://api-test.cloud.ametnes.com/v1"
-	// username := "Brave.Microphone@ametnes.com"
-	// token := "a03of\\75Ven4ada7A0W1h1>21f=4}b5fadQdn458254e@b3Tb\\"
 
-	client, err := NewClient(&Host, &UserName, &Token)
-
-	if err != nil {
-		t.Fail()
-	}
+	client := GetTestClient(t)
 
 	projects, err := client.GetProjects()
 	assert.Nil(t, err)
@@ -33,15 +26,8 @@ func TestGetResources(t *testing.T) {
 
 func TestCreteResources(t *testing.T) {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	host := "https://api-test.cloud.ametnes.com/v1"
-	username := "Brave.Microphone@ametnes.com"
-	token := ">9cwfa$5S@737Of7A9_f95wd54f)a74cfd34c1M7Xe612%c0Gcf"
 
-	client, err := NewClient(&host, &username, &token)
-
-	if err != nil {
-		t.Fail()
-	}
+	client := GetTestClient(t)
 
 	projects, err := client.GetProjects()
 	assert.Nil(t, err)
