@@ -33,37 +33,45 @@ func resourceService() *schema.Resource {
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 			"kind": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"product_code": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  DefaultProductCode,
+				ForceNew: true,
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 
 			"cpu": {
 				Type:     schema.TypeInt,
 				Required: true,
+				ForceNew: true,
 			},
 
 			"memory": {
 				Type:     schema.TypeInt,
 				Required: true,
+				ForceNew: true,
 			},
 			"storage": {
 				Type:     schema.TypeInt,
 				Required: true,
+				ForceNew: true,
 			},
 			"nodes": {
 				Type:     schema.TypeInt,
 				Required: true,
+				ForceNew: true,
 			},
 
 			// computed

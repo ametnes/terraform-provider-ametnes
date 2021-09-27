@@ -26,12 +26,24 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("AMETNES_USERNAME", nil),
 				Description: "The username for API operations.",
 			},
+			"auth_type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "basic",
+			},
 		},
 		ConfigureContextFunc: func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 			token := data.Get("token").(string)
 			username := data.Get("username").(string)
+			authType := data.Get("auth_type").(string)
+
+			enumAuthType := Basic
+
+			if authType == "bearer" {
+				enumAuthType = Bearer
+			}
 			client, err := NewClient(AMETNES_HOST, Token{
-				Type:     Basic,
+				Type:     enumAuthType,
 				Token:    token,
 				Username: &username,
 			})
