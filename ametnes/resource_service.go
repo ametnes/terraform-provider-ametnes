@@ -40,12 +40,6 @@ func resourceService() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"product_code": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  DefaultProductCode,
-				ForceNew: true,
-			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -123,7 +117,6 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Kind:        d.Get("kind").(string),
 		Location:    d.Get("location").(string),
 		Name:        d.Get("name").(string),
-		Product:     d.Get("product_code").(int),
 		Description: description,
 		Spec: Spec{
 			Components: map[string]interface{}{

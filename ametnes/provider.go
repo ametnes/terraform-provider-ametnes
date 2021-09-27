@@ -31,18 +31,30 @@ func Provider() *schema.Provider {
 				Optional: true,
 				Default:  "basic",
 			},
+			"host": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("AMETNES_HOST", AMETNES_HOST),
+				Description: "The API host.",
+			},
+			"insecure": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 		ConfigureContextFunc: func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {
 			token := data.Get("token").(string)
 			username := data.Get("username").(string)
 			authType := data.Get("auth_type").(string)
+			host := data.Get("host").(string)
 
 			enumAuthType := Basic
 
 			if authType == "bearer" {
 				enumAuthType = Bearer
 			}
-			client, err := NewClient(AMETNES_HOST, Token{
+			client, err := NewClient(host, Token{
 				Type:     enumAuthType,
 				Token:    token,
 				Username: &username,
