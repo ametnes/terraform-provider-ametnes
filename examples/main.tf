@@ -9,6 +9,7 @@ terraform {
 
 provider "ametnes" {
   // add you provider here
+  host = "https://api-test.cloud.ametnes.com/v1"
 }
 
 resource "ametnes_service" "sample" {
