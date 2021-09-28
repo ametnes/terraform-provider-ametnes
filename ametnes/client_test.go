@@ -27,10 +27,12 @@ func TestClient(t *testing.T) {
 }
 
 func GetTestClient(t *testing.T) *Client {
-	host := "https://cloud.ametnes.com/api"
+	host := "https://api-test.cloud.ametnes.com/v1"
+	username := "Brave.Microphone@ametnes.com"
 	client, err := NewClient(host, Token{
-		Type:  Bearer,
-		Token: "YR7gASZaRCgJ3Evf78N5kz3oCDUwlJYoaunj7EEc8HV8S5ypm9hmhaH1IQRyMM1K1L6XSJKbuxevfyriSwvDPMxgZXUbWqgbxofKL9XgpSV800ou5cI9juwHivVwSPAe",
+		Type:     Basic,
+		Username: &username,
+		Token:    "cCncjAe51,a3bgc91cy4Ke4466571r~da7dZ_791Je9f1Q1244b_",
 	})
 	if err != nil {
 		t.Fatal(err)
