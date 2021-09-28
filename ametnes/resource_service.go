@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -132,8 +133,20 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	// Identity function
-	d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
+
+	respChan := client.checkStatus(projectID, service.Id)
+	select {
+	case res := <-respChan:
+		if res.Success {
+			// Identity function
+			d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
+			return resourceServiceRead(ctx, d, m)
+		}
+	case <-time.After(15 * time.Minute):
+		return diag.Errorf("Timeout occured while checking for state")
+	}
+
+	// we will not reach here
 	return nil
 }
 

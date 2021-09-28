@@ -25,6 +25,11 @@ const (
 	Bearer           = iota
 )
 
+type Status struct {
+	Error   error
+	Success bool
+}
+
 type Token struct {
 	Type TokenType
 
@@ -74,4 +79,33 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 	}
 
 	return body, err
+}
+
+func (c *Client) checkStatus(projectID, resourceID int) chan Status {
+	respChan := make(chan Status)
+
+	go func() {
+		for {
+			resource, err := c.GetResource(projectID, resourceID)
+			if err != nil {
+				respChan <- Status{
+					Error:   err,
+					Success: false,
+				}
+				close(respChan)
+				return
+			}
+			if resource.Status != "INIT" {
+				respChan <- Status{
+					Success: true,
+				}
+				close(respChan)
+				return
+			}
+			time.Sleep(30 * time.Second)
+		}
+
+	}()
+
+	return respChan
 }

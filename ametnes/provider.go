@@ -2,6 +2,8 @@ package ametnes
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -48,6 +50,7 @@ func Provider() *schema.Provider {
 			username := data.Get("username").(string)
 			authType := data.Get("auth_type").(string)
 			host := data.Get("host").(string)
+			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: data.Get("insecure").(bool)}
 
 			enumAuthType := Basic
 
