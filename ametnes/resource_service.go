@@ -72,7 +72,8 @@ func resourceService() *schema.Resource {
 			// computed
 			"network": {
 				Type:     schema.TypeInt,
-				Computed: true,
+				Optional: true,
+				ForceNew: true,
 			},
 			"status": {
 				Type:     schema.TypeString,
@@ -113,7 +114,8 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if desc, ok := d.GetOk("description"); ok {
 		description = desc.(string)
 	}
-	service, err := client.CreateResource(Resource{
+
+	resource := Resource{
 		Project:     projectID,
 		Kind:        d.Get("kind").(string),
 		Location:    d.Get("location").(string),
@@ -127,8 +129,12 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 			},
 			Nodes: d.Get("nodes").(int),
 		},
-	},
-	)
+	}
+
+	if net, ok := d.GetOk("network"); ok {
+		resource.Network = net.(int)
+	}
+	service, err := client.CreateResource(resource)
 
 	if err != nil {
 		return diag.FromErr(err)
