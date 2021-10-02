@@ -199,8 +199,26 @@ func resourceServiceDelete(ctx context.Context, d *schema.ResourceData, m interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	return diag.FromErr(client.DeleteResource(Resource{
+	err = client.DeleteResource(Resource{
 		Project: projectID,
 		Id:      resourceID,
-	}))
+	})
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	respChan := client.checkStatusDelete(projectID, resourceID)
+	select {
+	case res := <-respChan:
+		if res.Success {
+			// Identity function
+			d.SetId("")
+			return nil
+		}
+	case <-time.After(10 * time.Minute):
+		return diag.Errorf("Timeout occured while checking for state")
+	}
+	// we will not get here
+	return nil
 }

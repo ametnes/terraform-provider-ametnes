@@ -109,3 +109,35 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 
 	return respChan
 }
+
+func (c *Client) checkStatusDelete(projectID, resourceID int) chan Status {
+	respChan := make(chan Status)
+
+	go func() {
+		for {
+			resource, err := c.GetResource(projectID, resourceID)
+			// if there is an error while getting the resource then mostly the resource is deleted
+			if err != nil {
+				respChan <- Status{
+					Success: true,
+				}
+				close(respChan)
+				return
+			}
+
+			if resource != nil && resource.Status == "ERROR" {
+				respChan <- Status{
+					Success: false,
+					Error:   fmt.Errorf("error while deleting resource id %d", resourceID),
+				}
+				close(respChan)
+				return
+			}
+
+			time.Sleep(10 * time.Second)
+		}
+
+	}()
+
+	return respChan
+}
