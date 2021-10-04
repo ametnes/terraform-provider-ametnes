@@ -95,13 +95,21 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 				close(respChan)
 				return
 			}
-			if resource.Status != "INIT" {
+			if resource.Status == "READY" {
 				respChan <- Status{
 					Success: true,
 				}
 				close(respChan)
 				return
 			}
+
+			if resource.Status == "ERROR" {
+				respChan <- Status{
+					Success: false,
+					Error:   fmt.Errorf("error while creating resource %d", resourceID),
+				}
+			}
+
 			time.Sleep(30 * time.Second)
 		}
 
