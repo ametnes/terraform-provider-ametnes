@@ -1,0 +1,12 @@
+image: golang:1.15
+
+stages:
+  - test
+
+unit-tests:
+  stage: test
+  before_script:
+    - go mod vendor
+  
+  script:
+    - make test
