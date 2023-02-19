@@ -16,11 +16,16 @@ type Resource struct {
 
 type Spec struct {
 	Components map[string]interface{} `json:"components,omitempty"`
-	Nodes      int                    `json:"nodes:omitempty"`
+	Nodes      int                    `json:"nodes,omitempty"`
+	Networks   []Networks             `json:"networks,omitempty"`
 }
 type Resources struct {
 	Count int        `json:"count,omitempty"`
 	Items []Resource `json:"results,omitempty"`
+}
+
+type Networks struct {
+	Id int `json:"id,omitempty"`
 }
 
 type Project struct {

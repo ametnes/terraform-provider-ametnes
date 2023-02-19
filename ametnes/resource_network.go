@@ -11,13 +11,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const DefaultProductCode = 3795211474
+const DefaultCpu = 1
+const DefaultStorage = 1
+const DefaultMemory = 1
+const DefaultNodes = 1
 
-func resourceService() *schema.Resource {
+func resourceNetwork() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceServiceCreate,
-		ReadContext:   resourceServiceRead,
-		DeleteContext: resourceServiceDelete,
+		CreateContext: resourceNetworkCreate,
+		ReadContext:   resourceNetworkRead,
+		DeleteContext: resourceNetworkDelete,
 
 		Schema: map[string]*schema.Schema{
 
@@ -38,33 +41,12 @@ func resourceService() *schema.Resource {
 			},
 			"kind": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
+				Default:  "network/loadbalancer:1.0",
 			},
 			"location": {
 				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-
-			"cpu": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-			},
-
-			"memory": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-			},
-			"storage": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-			},
-			"nodes": {
-				Type:     schema.TypeInt,
 				Required: true,
 				ForceNew: true,
 			},
@@ -87,7 +69,7 @@ func resourceService() *schema.Resource {
 	}
 }
 
-func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	client := m.(*Client)
 
@@ -123,35 +105,30 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Description: description,
 		Spec: Spec{
 			Components: map[string]interface{}{
-				"cpu":     d.Get("cpu").(int),
-				"storage": d.Get("storage").(int),
-				"memory":  d.Get("memory").(int),
+				"cpu":     DefaultCpu,
+				"storage": DefaultStorage,
+				"memory":  DefaultMemory,
 			},
-			Networks: []Networks{
-				{
-					Id: d.Get("network").(int),
-				},
-			},
-			Nodes: d.Get("nodes").(int),
+			Nodes: DefaultNodes,
 		},
 	}
 
 	if net, ok := d.GetOk("network"); ok {
 		resource.Network = net.(int)
 	}
-	service, err := client.CreateResource(resource)
+	network, err := client.CreateResource(resource)
 
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	respChan := client.checkStatus(projectID, service.Id)
+	respChan := client.checkStatus(projectID, network.Id)
 	select {
 	case res := <-respChan:
 		if res.Success {
 			// Identity function
-			d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
-			return resourceServiceRead(ctx, d, m)
+			d.SetId(fmt.Sprintf("%d/%d", projectID, network.Id))
+			return resourceNetworkRead(ctx, d, m)
 		}
 	case <-time.After(15 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
@@ -161,7 +138,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	return nil
 }
 
-func resourceServiceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetworkRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	client := m.(*Client)
 
@@ -190,7 +167,7 @@ func resourceServiceRead(ctx context.Context, d *schema.ResourceData, m interfac
 	return nil
 }
 
-func resourceServiceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetworkDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 
 	ids := strings.Split(d.Id(), "/")
