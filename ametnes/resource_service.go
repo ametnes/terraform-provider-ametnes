@@ -127,6 +127,11 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 				"storage": d.Get("storage").(int),
 				"memory":  d.Get("memory").(int),
 			},
+			Networks: []Networks{
+				{
+					Id: d.Get("network").(int),
+				},
+			},
 			Nodes: d.Get("nodes").(int),
 		},
 	}
