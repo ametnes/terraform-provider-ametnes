@@ -65,3 +65,23 @@ resource "ametnes_service" "pg" {
   nodes = 1
   cpu = 1
 }
+
+resource "ametnes_network" "network" {
+  name = "NETWORK-EUW3"
+  project_name = "Demo"
+  location = "d53059a1e6"
+  description = "My loadbalance resource"
+}
+
+resource "ametnes_service" "grafana" {
+  name = "grafana93"
+  project_name = "Demo"
+  location = "d53059a1e6"
+  kind = "service/grafana:9.3"
+  description = "sample grafana"
+  network = tonumber(element(split("/", ametnes_service.network.id), 1))
+  storage = 1
+  memory = 1
+  cpu = 1
+  nodes = 1
+}
