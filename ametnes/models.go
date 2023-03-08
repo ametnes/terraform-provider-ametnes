@@ -17,6 +17,7 @@ type Resource struct {
 type Spec struct {
 	Components map[string]interface{} `json:"components,omitempty"`
 	Nodes      int                    `json:"nodes,omitempty"`
+	Config     map[string]interface{} `json:"config,omitempty"`
 	Networks   []Networks             `json:"networks,omitempty"`
 }
 type Resources struct {
@@ -43,6 +44,12 @@ type Projects struct {
 type Product struct {
 	Id   int    `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
+}
+
+type Capacity struct {
+	Cpu     int
+	Memory  int
+	Storage int
 }
 
 func ProductFilter(ss []Product, test func(Product) bool) (ret []Product) {

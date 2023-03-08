@@ -3,8 +3,6 @@ package ametnes
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -19,8 +17,8 @@ const DefaultNodes = 1
 func resourceNetwork() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceNetworkCreate,
-		ReadContext:   resourceNetworkRead,
-		DeleteContext: resourceNetworkDelete,
+		ReadContext:   resourceServiceOrNetworkRead,
+		DeleteContext: resourceServiceOrNetworkDelete,
 
 		Schema: map[string]*schema.Schema{
 
@@ -43,7 +41,7 @@ func resourceNetwork() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-				Default:  "network/loadbalancer:1.0",
+				Default:  "loadbalancer:1.0",
 			},
 			"location": {
 				Type:     schema.TypeString,
@@ -96,10 +94,14 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if desc, ok := d.GetOk("description"); ok {
 		description = desc.(string)
 	}
+	kind := d.Get("kind").(string)
 
+	// we add network as prefix for network resource as thats how
+	// server differentiates from other resources like service.
+	prefixedKind := fmt.Sprintf("network/%s", kind)
 	resource := Resource{
 		Project:     projectID,
-		Kind:        d.Get("kind").(string),
+		Kind:        prefixedKind,
 		Location:    d.Get("location").(string),
 		Name:        d.Get("name").(string),
 		Description: description,
@@ -128,79 +130,12 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if res.Success {
 			// Identity function
 			d.SetId(fmt.Sprintf("%d/%d", projectID, network.Id))
-			return resourceNetworkRead(ctx, d, m)
+			return resourceServiceOrNetworkRead(ctx, d, m)
 		}
 	case <-time.After(15 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 
 	// we will not reach here
-	return nil
-}
-
-func resourceNetworkRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	client := m.(*Client)
-
-	ids := strings.Split(d.Id(), "/")
-
-	projectID, err := strconv.Atoi(ids[0])
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	resourceID, err := strconv.Atoi(ids[1])
-
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	resource, err := client.GetResource(projectID, resourceID)
-	if err != nil {
-		// if we get error while getting resource then
-		d.SetId("")
-		return nil
-	}
-	d.Set("network", resource.Network)
-	d.Set("status", resource.Status)
-	d.Set("account", resource.Account)
-
-	return nil
-}
-
-func resourceNetworkDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := m.(*Client)
-
-	ids := strings.Split(d.Id(), "/")
-
-	projectID, err := strconv.Atoi(ids[0])
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	resourceID, err := strconv.Atoi(ids[1])
-
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = client.DeleteResource(Resource{
-		Project: projectID,
-		Id:      resourceID,
-	})
-
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	respChan := client.checkStatusDelete(projectID, resourceID)
-	select {
-	case res := <-respChan:
-		if res.Success {
-			// Identity function
-			d.SetId("")
-			return nil
-		}
-	case <-time.After(10 * time.Minute):
-		return diag.Errorf("Timeout occured while checking for state")
-	}
-	// we will not get here
 	return nil
 }

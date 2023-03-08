@@ -141,62 +141,62 @@ func dataSourceKinds() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKindsRead,
 		Schema: map[string]*schema.Schema{
-			"kinds": &schema.Schema{
+			"kinds": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"id": &schema.Schema{
+						"id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"name": &schema.Schema{
+						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"kind": &schema.Schema{
+						"kind": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"locations": &schema.Schema{
+						"locations": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem:     schema.TypeString,
 						},
-						"backups": &schema.Schema{
+						"backups": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"enabled": &schema.Schema{
+									"enabled": {
 										Type:     schema.TypeBool,
 										Required: true,
 									},
 								},
 							},
 						},
-						"tools": &schema.Schema{
+						"tools": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"enabled": &schema.Schema{
+									"enabled": {
 										Type:     schema.TypeBool,
 										Required: true,
 									},
 								},
 							},
 						},
-						"limits": &schema.Schema{
+						"limits": {
 							Type:     schema.TypeList,
 							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"nodes": &schema.Schema{
+									"nodes": {
 										MaxItems: 1,
 										Type:     schema.TypeList,
 										Required: true,
@@ -205,15 +205,15 @@ func dataSourceKinds() *schema.Resource {
 								},
 							},
 						},
-						"type": &schema.Schema{
+						"type": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"release": &schema.Schema{
+						"release": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"enabled": &schema.Schema{
+						"enabled": {
 							Type:     schema.TypeBool,
 							Computed: true,
 						},

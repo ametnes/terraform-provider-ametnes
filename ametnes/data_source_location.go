@@ -43,36 +43,36 @@ func dataSourceLocations() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceLocationsRead,
 		Schema: map[string]*schema.Schema{
-			"locations": &schema.Schema{
+			"locations": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"id": &schema.Schema{
+						"id": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"name": &schema.Schema{
+						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"provider": &schema.Schema{
+						"provider": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"region": &schema.Schema{
+						"region": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"create_date": &schema.Schema{
+						"create_date": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"update_date": &schema.Schema{
+						"update_date": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"enabled": &schema.Schema{
+						"enabled": {
 							Type:     schema.TypeBool,
 							Computed: true,
 						},

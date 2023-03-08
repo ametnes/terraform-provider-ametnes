@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     ametnes = {
-      # version = "0.2"
+      # version = "0.3"
       source  = "ametnes.com/cloud/ametnes"
     }
   }

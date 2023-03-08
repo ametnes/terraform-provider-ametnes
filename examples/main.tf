@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     ametnes = {
-      # version = "0.2"
+      # version = "0.3"
       source  = "ametnes.com/cloud/ametnes"
     }
   }
@@ -11,77 +11,34 @@ provider "ametnes" {
   // add you provider here
   host = "https://api-test.cloud.ametnes.com/v1"
   insecure = true
+  username = "Brave.Microphone@ametnes.com"
 }
 
-resource "ametnes_service" "network" {
-  name = "NETWORK-EUW2"
-  project_name = "Default"
-  location = "aws/eu-west-2"
-  kind = "network/privatelink:1.0"
-  description = "My name is Sample"
-  storage = 1
-  memory = 1
-  nodes = 1
-  cpu = 1
-}
-
-resource "ametnes_service" "mysql" {
-  count = 3
-  name = "Test Sample ${count.index}"
-  project_name = "Default"
-  location = "aws/eu-west-2"
-  kind = "service/mysql:8.0"
-  description = "My name is Sample"
-  network = tonumber(element(split("/", ametnes_service.network.id), 1))
-  storage = 1
-  memory = 1
-  nodes = 1
-  cpu = 1
-}
-
-resource "ametnes_service" "postgres" {
-  count = 4
-  name = "MySql Db ${count.index}"
-  project_name = "Default"
-  location = "aws/eu-west-2"
-  kind = "service/mysql:8.0"
-  description = "My name is Sample"
-  network = tonumber(element(split("/", ametnes_service.network.id), 1))
-  storage = 1
-  memory = 1
-  nodes = 1
-  cpu = 1
-}
-
-resource "ametnes_service" "pg" {
-  count = 4
-  name = "Postgres DB ${count.index}"
-  project_name = "Default"
-  location = "gcp/europe-west2"
-  kind = "service/postgres:11.9"
-  description = "My name is Sample"
-  storage = 1
-  memory = 1
-  nodes = 1
-  cpu = 1
-}
 
 resource "ametnes_network" "network" {
-  name = "NETWORK-EUW3"
+  name = "NETWORK-EUW5"
   project_name = "Demo"
   location = "d53059a1e6"
   description = "My loadbalance resource"
 }
 
 resource "ametnes_service" "grafana" {
-  name = "grafana93"
+  name = "grafana454"
   project_name = "Demo"
   location = "d53059a1e6"
-  kind = "service/grafana:9.3"
+  kind = "grafana:9.3"
   description = "sample grafana"
-  network = tonumber(element(split("/", ametnes_service.network.id), 1))
-  storage = 1
-  memory = 1
-  cpu = 1
+  network = 7540149073
+  capacity {
+    storage = 1
+    memory = 1
+    cpu = 1
+  }
+
+  config = {
+    "auth.azuread.client_id" = "SomeText"
+    "auth.azuread.client_secret" = "SomeText"
+  }
+ 
   nodes = 1
 }
