@@ -65,3 +65,5 @@ terraform
 .terraform*
 
 terraform-provider-ametnes
+
+*secrets*

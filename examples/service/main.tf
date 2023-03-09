@@ -10,25 +10,33 @@ terraform {
 provider "ametnes" {
   // add you provider here
   host = "https://api-test.cloud.ametnes.com/v1"
+  token = var.token
   insecure = true
   username = "Brave.Microphone@ametnes.com"
 }
 
+data "ametnes_project" "project" {
+  name = "Demo"
+}
 
-resource "ametnes_network" "network" {
+data "ametnes_location" "location" {
+  name = "Ametnes Cloud"
+  code = "EUW1"
+}
+
+data "ametnes_network" "network" {
   name = "NETWORK-EUW5"
-  project_name = "Demo"
-  location = "d53059a1e6"
-  description = "My loadbalance resource"
+  project = data.ametnes_project.project.id
+  location = data.ametnes_location.location.id
 }
 
 resource "ametnes_service" "grafana" {
-  name = "grafana454"
-  project_name = "Demo"
-  location = "d53059a1e6"
+  name = "grafana455"
+  project = data.ametnes_project.project.id
+  location = data.ametnes_location.location.id
   kind = "grafana:9.3"
   description = "sample grafana"
-  network = 7540149073
+  network = data.ametnes_network.network.id
   capacity {
     storage = 1
     memory = 1
