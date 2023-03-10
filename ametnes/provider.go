@@ -74,8 +74,10 @@ func Provider() *schema.Provider {
 			"ametnes_network": resourceNetwork(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"ametnes_locations": dataSourceLocations(),
-			"ametnes_kinds":     dataSourceKinds(),
+			"ametnes_location": dataSourceLocation(),
+			"ametnes_kinds":    dataSourceKinds(),
+			"ametnes_project":  dataSourceProject(),
+			"ametnes_network":  dataSourceNetwork(),
 		},
 	}
 }

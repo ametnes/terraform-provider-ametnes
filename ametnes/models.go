@@ -34,11 +34,26 @@ type Project struct {
 	Account     int    `json:"account,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
+	Enabled     bool   `json:"enabled,omitempty"`
 }
 
 type Projects struct {
 	Count int       `json:"count,omitempty"`
 	Items []Project `json:"results,omitempty"`
+}
+
+type Location struct {
+	Id          string `json:"id,omitempty"`
+	Description string `json:"description,omitempty"`
+	Enabled     bool   `json:"enabled,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Status      string `json:"status,omitempty"`
+	Location    string `json:"location,omitempty"`
+}
+
+type Locations struct {
+	Count int        `json:"count,omitempty"`
+	Items []Location `json:"results,omitempty"`
 }
 
 type Product struct {

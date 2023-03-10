@@ -31,7 +31,7 @@ data "ametnes_network" "network" {
 }
 
 resource "ametnes_service" "grafana" {
-  name = "grafana455"
+  name = "grafana43333"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
   kind = "grafana:9.3"

@@ -12,6 +12,7 @@ provider "ametnes" {
   host = "https://api-test.cloud.ametnes.com/v1"
   token = var.token
   insecure = true
+  auth_type = "bearer"
   username = "Brave.Microphone@ametnes.com"
 }
 
@@ -25,7 +26,7 @@ data "ametnes_location" "location" {
 }
 
 resource "ametnes_network" "network" {
-  name = "NETWORK-EUW5"
+  name = "NETWORK-EUW7"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
   description = "My loadbalance resource"

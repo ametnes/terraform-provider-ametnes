@@ -3,6 +3,7 @@ package ametnes
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -22,7 +23,7 @@ func resourceNetwork() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 
-			"project_name": {
+			"project": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true, // if the project name changes then we need to force new resource
@@ -71,22 +72,9 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	client := m.(*Client)
 
-	projects, err := client.GetProjects()
+	projectID, err := strconv.Atoi(d.Get("project").(string))
 	if err != nil {
 		return diag.FromErr(err)
-	}
-
-	projectID := -1
-	projectName := d.Get("project_name").(string)
-
-	for _, project := range projects {
-		if project.Name == projectName {
-			projectID = project.Id
-			break
-		}
-	}
-	if projectID == -1 {
-		return diag.Errorf("Cannot find your project with name %s", projectName)
 	}
 
 	description := ""

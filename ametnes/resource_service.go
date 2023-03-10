@@ -21,10 +21,10 @@ func resourceService() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 
-			"project_name": {
+			"project": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true, // if the project name changes then we need to force new resource
+				ForceNew: true, // if the project changes then we need to force new resource
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -87,7 +87,7 @@ func resourceService() *schema.Resource {
 			},
 			// computed
 			"network": {
-				Type:     schema.TypeInt,
+				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
@@ -107,22 +107,9 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	client := m.(*Client)
 
-	projects, err := client.GetProjects()
+	projectID, err := strconv.Atoi(d.Get("project").(string))
 	if err != nil {
 		return diag.FromErr(err)
-	}
-
-	projectID := -1
-	projectName := d.Get("project_name").(string)
-
-	for _, project := range projects {
-		if project.Name == projectName {
-			projectID = project.Id
-			break
-		}
-	}
-	if projectID == -1 {
-		return diag.Errorf("Cannot find your project with name %s", projectName)
 	}
 
 	description := ""
@@ -158,18 +145,23 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 				"storage": capacity.Storage,
 				"memory":  capacity.Memory,
 			},
-			Networks: []Networks{
-				{
-					Id: d.Get("network").(int),
-				},
-			},
 			Nodes:  d.Get("nodes").(int),
 			Config: config,
 		},
 	}
 
-	if net, ok := d.GetOk("network"); ok {
-		resource.Network = net.(int)
+	if networkIntf, ok := d.GetOk("network"); ok {
+		networkStr := networkIntf.(string)
+		networkInt, err := strconv.Atoi(networkStr)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		resource.Network = networkInt
+		resource.Spec.Networks = []Networks{
+			{
+				Id: networkInt,
+			},
+		}
 	}
 	service, err := client.CreateResource(resource)
 
@@ -185,7 +177,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 			d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
 			return resourceServiceOrNetworkRead(ctx, d, m)
 		}
-	case <-time.After(15 * time.Minute):
+	case <-time.After(45 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 
