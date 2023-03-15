@@ -16,15 +16,15 @@ const DefaultProductCode = 3795211474
 func resourceService() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceServiceCreate,
-		ReadContext:   resourceServiceRead,
-		DeleteContext: resourceServiceDelete,
+		ReadContext:   resourceServiceOrNetworkRead,
+		DeleteContext: resourceServiceOrNetworkDelete,
 
 		Schema: map[string]*schema.Schema{
 
-			"project_name": {
+			"project": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true, // if the project name changes then we need to force new resource
+				ForceNew: true, // if the project changes then we need to force new resource
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -46,32 +46,48 @@ func resourceService() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"capacity": {
+				Type:     schema.TypeList,
+				Required: false,
+				ForceNew: true,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cpu": {
+							Type:     schema.TypeInt,
+							Optional: true,
+							ForceNew: true,
+						},
 
-			"cpu": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-			},
-
-			"memory": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-			},
-			"storage": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
+						"memory": {
+							Type:     schema.TypeInt,
+							Optional: true,
+							ForceNew: true,
+						},
+						"storage": {
+							Type:     schema.TypeInt,
+							Optional: true,
+							ForceNew: true,
+						},
+					},
+				},
 			},
 			"nodes": {
 				Type:     schema.TypeInt,
 				Required: true,
 				ForceNew: true,
 			},
-
+			"config": {
+				Type:     schema.TypeMap,
+				Required: false,
+				ForceNew: true,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 			// computed
 			"network": {
-				Type:     schema.TypeInt,
+				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
@@ -91,22 +107,9 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	client := m.(*Client)
 
-	projects, err := client.GetProjects()
+	projectID, err := strconv.Atoi(d.Get("project").(string))
 	if err != nil {
 		return diag.FromErr(err)
-	}
-
-	projectID := -1
-	projectName := d.Get("project_name").(string)
-
-	for _, project := range projects {
-		if project.Name == projectName {
-			projectID = project.Id
-			break
-		}
-	}
-	if projectID == -1 {
-		return diag.Errorf("Cannot find your project with name %s", projectName)
 	}
 
 	description := ""
@@ -114,25 +117,51 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if desc, ok := d.GetOk("description"); ok {
 		description = desc.(string)
 	}
+	kind := d.Get("kind").(string)
 
+	// get the capacity
+	capacity, err := expandCapacitySchema(d.Get("capacity").([]interface{}))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	var config map[string]interface{}
+	if v, ok := d.GetOk("config"); ok {
+		config = v.(map[string]interface{})
+	}
+
+	// we add service as prefix for service resource as thats how
+	// server differentiates from other resources like network.
+	prefixedKind := fmt.Sprintf("service/%s", kind)
 	resource := Resource{
 		Project:     projectID,
-		Kind:        d.Get("kind").(string),
+		Kind:        prefixedKind,
 		Location:    d.Get("location").(string),
 		Name:        d.Get("name").(string),
 		Description: description,
 		Spec: Spec{
 			Components: map[string]interface{}{
-				"cpu":     d.Get("cpu").(int),
-				"storage": d.Get("storage").(int),
-				"memory":  d.Get("memory").(int),
+				"cpu":     capacity.Cpu,
+				"storage": capacity.Storage,
+				"memory":  capacity.Memory,
 			},
-			Nodes: d.Get("nodes").(int),
+			Nodes:  d.Get("nodes").(int),
+			Config: config,
 		},
 	}
 
-	if net, ok := d.GetOk("network"); ok {
-		resource.Network = net.(int)
+	if networkIntf, ok := d.GetOk("network"); ok {
+		networkStr := networkIntf.(string)
+		networkInt, err := strconv.Atoi(networkStr)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		resource.Network = networkInt
+		resource.Spec.Networks = []Networks{
+			{
+				Id: networkInt,
+			},
+		}
 	}
 	service, err := client.CreateResource(resource)
 
@@ -146,9 +175,9 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if res.Success {
 			// Identity function
 			d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
-			return resourceServiceRead(ctx, d, m)
+			return resourceServiceOrNetworkRead(ctx, d, m)
 		}
-	case <-time.After(15 * time.Minute):
+	case <-time.After(45 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 
@@ -156,7 +185,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	return nil
 }
 
-func resourceServiceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	client := m.(*Client)
 
@@ -185,7 +214,7 @@ func resourceServiceRead(ctx context.Context, d *schema.ResourceData, m interfac
 	return nil
 }
 
-func resourceServiceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceServiceOrNetworkDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 
 	ids := strings.Split(d.Id(), "/")
@@ -221,4 +250,36 @@ func resourceServiceDelete(ctx context.Context, d *schema.ResourceData, m interf
 	}
 	// we will not get here
 	return nil
+}
+
+func expandCapacitySchema(in []interface{}) (*Capacity, error) {
+	cap := &Capacity{}
+	if len(in) == 0 || in[0] == nil {
+		return &Capacity{
+			Cpu:     1,
+			Memory:  1,
+			Storage: 1,
+		}, nil
+	}
+	m := in[0].(map[string]interface{})
+
+	if cpu, ok := m["cpu"]; ok {
+		cap.Cpu = cpu.(int)
+	} else {
+		cap.Cpu = 1
+	}
+
+	if mem, ok := m["memory"]; ok {
+		cap.Memory = mem.(int)
+	} else {
+		cap.Memory = 1
+	}
+
+	if storage, ok := m["storage"]; ok {
+		cap.Storage = storage.(int)
+	} else {
+		cap.Storage = 1
+	}
+
+	return cap, nil
 }

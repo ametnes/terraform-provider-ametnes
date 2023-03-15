@@ -2,11 +2,6 @@ package ametnes
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -39,81 +34,60 @@ import (
 }
 */
 
-func dataSourceLocations() *schema.Resource {
+func dataSourceLocation() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceLocationsRead,
 		Schema: map[string]*schema.Schema{
-			"locations": &schema.Schema{
-				Type:     schema.TypeList,
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"code": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"location": {
+				Type:     schema.TypeString,
 				Computed: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"name": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"provider": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"region": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"create_date": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"update_date": &schema.Schema{
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"enabled": &schema.Schema{
-							Type:     schema.TypeBool,
-							Computed: true,
-						},
-					},
-				},
+			},
+			"enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+			"status": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
 }
 
 func dataSourceLocationsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := m.(*Client)
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
+	locationName := d.Get("name").(string)
+	locationCode := d.Get("code").(string)
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/metadata/locations", "https://api-test.cloud.ametnes.com/v1"), nil)
+	locations, err := client.GetLocations()
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	r, err := client.Do(req)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	defer r.Body.Close()
-
-	var locations map[string]interface{}
-	err = json.NewDecoder(r.Body).Decode(&locations)
-	if err != nil {
-		return diag.FromErr(err)
+	var foundLocation *Location
+	for _, location := range locations {
+		if location.Name == locationName && location.Location == locationCode {
+			foundLocation = &location
+			break
+		}
 	}
 
-	// results, ok := locations.(map[string]interface{})
-
-	if err := d.Set("locations", locations["results"]); err != nil {
-		return diag.FromErr(err)
+	if foundLocation == nil {
+		return diag.Errorf("The location with code %s and name %s wasn't found", locationCode, locationName)
 	}
 
 	// always run
-	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
-
-	return diags
+	d.SetId(foundLocation.Id)
+	d.Set("location", foundLocation.Location)
+	d.Set("enabled", foundLocation.Enabled)
+	d.Set("status", foundLocation.Status)
+	return nil
 }
