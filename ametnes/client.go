@@ -51,7 +51,7 @@ func (tk *Token) GetAuthHeader() string {
 // NewClient
 func NewClient(host string, tkn Token) (*Client, error) {
 	c := Client{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		HTTPClient: &http.Client{Timeout: 120 * time.Second},
 		HostURL:    host,
 	}
 
