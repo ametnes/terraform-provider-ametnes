@@ -152,6 +152,14 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	if networkIntf, ok := d.GetOk("network"); ok {
 		networkStr := networkIntf.(string)
+
+		// if there is a project id present as a prefix lets
+		// just remove it
+		if strings.Contains(networkStr, "/") {
+			networkParts := strings.Split(networkStr, "/")
+			// we remove the project id part
+			networkStr = networkParts[1]
+		}
 		networkInt, err := strconv.Atoi(networkStr)
 		if err != nil {
 			return diag.FromErr(err)
