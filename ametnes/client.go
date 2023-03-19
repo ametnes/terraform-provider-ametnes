@@ -59,6 +59,10 @@ func NewClient(host string, tkn Token) (*Client, error) {
 	return &c, nil
 }
 
+func (c *Client) SetHTTPTimeout(timeout int) {
+	c.HTTPClient.Timeout = time.Second * time.Duration(timeout)
+}
+
 func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 	req.Header.Set("Authorization", c.AuthHeader)
 	req.Header.Add("Content-Type", "application/json")

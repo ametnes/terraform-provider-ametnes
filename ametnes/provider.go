@@ -33,6 +33,12 @@ func Provider() *schema.Provider {
 				Optional: true,
 				Default:  "basic",
 			},
+			"timeout": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     120,
+				Description: "The http client timeout",
+			},
 			"host": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -50,6 +56,7 @@ func Provider() *schema.Provider {
 			username := data.Get("username").(string)
 			authType := data.Get("auth_type").(string)
 			host := data.Get("host").(string)
+			timeout := data.Get("timeout").(int)
 			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: data.Get("insecure").(bool)}
 
 			enumAuthType := Basic
@@ -66,6 +73,8 @@ func Provider() *schema.Provider {
 			if err != nil {
 				return nil, diag.FromErr(err)
 			}
+
+			client.SetHTTPTimeout(timeout)
 
 			return client, nil
 		},
