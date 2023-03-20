@@ -99,6 +99,26 @@ func resourceService() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"connections": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"host": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"port": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -218,6 +238,17 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	d.Set("network", resource.Network)
 	d.Set("status", resource.Status)
 	d.Set("account", resource.Account)
+
+	connections := []Connection{}
+	if resource.Spec.Connections != nil && len(resource.Spec.Connections) != 0 {
+		connections = resource.Spec.Connections
+	} else if resource.Spec.Connection != nil && resource.Spec.Connection.Host != "" {
+		connections = append(connections, resource.Spec.Connection)
+	}
+
+	if len(connections) != 0 {
+		d.Set("connections", connections)
+	}
 
 	return nil
 }
