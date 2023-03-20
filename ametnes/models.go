@@ -19,7 +19,18 @@ type Spec struct {
 	Nodes      int                    `json:"nodes,omitempty"`
 	Config     map[string]interface{} `json:"config,omitempty"`
 	Networks   []Networks             `json:"networks,omitempty"`
+	// if there is only one connection then its connection
+	// else its connections
+	Connections []Connection `json:"connections,omitempty"`
+	Connection  Connection   `json:"connection,omitempty"`
 }
+
+type Connection struct {
+	Host string      `json:"host,omitempty"`
+	Name string      `json:"name,omitempty"`
+	Port interface{} `json:"port,omitempty"`
+}
+
 type Resources struct {
 	Count int        `json:"count,omitempty"`
 	Items []Resource `json:"results,omitempty"`
