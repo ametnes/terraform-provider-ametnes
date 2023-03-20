@@ -242,7 +242,7 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	connections := []Connection{}
 	if resource.Spec.Connections != nil && len(resource.Spec.Connections) != 0 {
 		connections = resource.Spec.Connections
-	} else if resource.Spec.Connection != nil && resource.Spec.Connection.Host != "" {
+	} else if resource.Spec.Connection.Host != "" {
 		connections = append(connections, resource.Spec.Connection)
 	}
 
