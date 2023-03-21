@@ -81,6 +81,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"ametnes_service": resourceService(),
 			"ametnes_network": resourceNetwork(),
+			"ametnes_project": resourceProject(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"ametnes_location": dataSourceLocation(),
