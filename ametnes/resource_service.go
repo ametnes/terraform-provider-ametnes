@@ -90,6 +90,11 @@ func resourceService() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Computed: true,
+			},
+			"resource_id": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"status": {
 				Type:     schema.TypeString,
@@ -235,6 +240,7 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		d.SetId("")
 		return nil
 	}
+	d.Set("resource_id", fmt.Sprint(resource.Id))
 	d.Set("network", fmt.Sprint(resource.Network))
 	d.Set("status", resource.Status)
 	d.Set("account", fmt.Sprint(resource.Account))
