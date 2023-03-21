@@ -235,9 +235,9 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		d.SetId("")
 		return nil
 	}
-	d.Set("network", resource.Network)
+	d.Set("network", fmt.Sprint(resource.Network))
 	d.Set("status", resource.Status)
-	d.Set("account", resource.Account)
+	d.Set("account", fmt.Sprint(resource.Account))
 
 	connections := []Connection{}
 	if resource.Spec.Connections != nil && len(resource.Spec.Connections) != 0 {
@@ -246,8 +246,18 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		connections = append(connections, resource.Spec.Connection)
 	}
 
+	var conns []interface{}
+	for _, conn := range connections {
+		connMap := make(map[string]interface{})
+		connMap["name"] = conn.Name
+		connMap["host"] = conn.Host
+		connMap["port"] = fmt.Sprint(conn.Port)
+
+		conns = append(conns, connMap)
+	}
+
 	if len(connections) != 0 {
-		d.Set("connections", connections)
+		d.Set("connections", conns)
 	}
 
 	return nil
