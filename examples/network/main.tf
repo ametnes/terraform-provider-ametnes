@@ -8,25 +8,32 @@ terraform {
 }
 
 provider "ametnes" {
-  // add you provider here
-  host = "https://api-test.cloud.ametnes.com/v1"
+   host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
-  insecure = true
-  auth_type = "bearer"
-  username = "Brave.Microphone@ametnes.com"
+  username = var.username
 }
 
+# data "ametnes_project" "project" {
+#   name = "Demo"
+# }
+
+# data "ametnes_location" "location" {
+#   name = "Ametnes Cloud"
+#   code = "EUW1"
+# }
+
 data "ametnes_project" "project" {
-  name = "Demo"
+  name = "Default"
 }
 
 data "ametnes_location" "location" {
-  name = "Ametnes Cloud"
-  code = "EUW1"
+  name = "Ametnes"
+  code = "DSL-USE1"
 }
 
+
 resource "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
+  name = "NETWORK-EUW8"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
   description = "My loadbalance resource"

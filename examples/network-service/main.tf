@@ -12,44 +12,48 @@ provider "ametnes" {
   host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
   username = var.username
+
 }
 
 data "ametnes_project" "project" {
-  name = "Default"
+  name = "Demo"
 }
 
 data "ametnes_location" "location" {
-  name = "Ametnes"
-  code = "DSL-USE1"
+  name = "Ametnes Cloud"
+  code = "EUW1"
 }
 
-data "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
+resource "ametnes_network" "network" {
+  name = "NETWORK-EUW5"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
+  description = "My loadbalance resource"
 }
 
-resource "ametnes_service" "grafana" {
-  name = "grafana43333"
+resource "ametnes_service" "hdb" {
+  name = "harperdb43334"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
-  kind = "grafana:9.3"
+  kind = "harperdb:3.3"
   description = "sample grafana"
-  network = data.ametnes_network.network.id
+  network = ametnes_network.network.resource_id
   capacity {
-    storage = 1
-    memory = 1
-    cpu = 1
+    storage = 100
+    memory = 4
+    cpu = 2
   }
 
   config = {
-    "auth.azuread.client_id" = "SomeText"
-    "auth.azuread.client_secret" = "SomeText"
+    "admin.user" = var.hdb_admin_user
+    "admin.password" = var.hdb_admin_pass
+    "clustering.user" = var.hdb_clustering_user
+    "clustering.password" = var.hdb_clustering_pass
   }
  
   nodes = 1
 }
 
-output "gfn_connections" {
-  value = ametnes_service.grafana.connections
+output "hdb_connections" {
+  value = ametnes_service.hdb.connections
 }
