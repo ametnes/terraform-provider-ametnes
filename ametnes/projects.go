@@ -43,13 +43,13 @@ func (c *Client) CreateProject(project Project) (*Project, error) {
 		return nil, err
 	}
 
-	n_project := Project{}
-	err = json.Unmarshal(body, &n_project)
+	newProject := Project{}
+	err = json.Unmarshal(body, &newProject)
 	if err != nil {
 		return nil, err
 	}
 
-	return &n_project, nil
+	return &newProject, nil
 }
 
 func (c *Client) UpdateProject(project Project) (*Project, error) {
