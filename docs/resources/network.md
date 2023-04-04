@@ -3,12 +3,12 @@
 page_title: "ametnes_network Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or just an object that manages a set of NodePort(s).
+  Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
 ---
 
 # ametnes_network (Resource)
 
-Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or just an object that manages a set of NodePort(s).
+Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
 
 ## Example Usage
 

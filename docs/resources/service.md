@@ -99,9 +99,9 @@ output "gfn_connections" {
 
 Optional:
 
-- `cpu` (Number)
-- `memory` (Number)
-- `storage` (Number)
+- `cpu` (Number) Cpu, in unit counts, that your service resource needs.
+- `memory` (Number) Memory, in (Gi) unit counts, that your service resource needs.
+- `storage` (Number) Storage, in (Gb) unit counts, that your service resource needs.
 
 
 <a id="nestedatt--connections"></a>

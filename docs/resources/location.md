@@ -44,7 +44,7 @@ resource "ametnes_location" "location" {
 
 ### Optional
 
-- `description` (String)
+- `description` (String) Description of the location.
 
 ### Read-Only
 

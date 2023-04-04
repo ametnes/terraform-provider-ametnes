@@ -33,6 +33,7 @@ Creates and manages an Ametnes Data Service location.
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Description: "Description of the location.",
 			},
 			"location": {
 				Type:     schema.TypeString,

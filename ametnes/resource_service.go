@@ -67,17 +67,20 @@ Creates and manages a data service resource. All data service resources created 
 							Type:     schema.TypeInt,
 							Optional: true,
 							ForceNew: true,
+							Description: "Cpu, in unit counts, that your service resource needs.",
 						},
 
 						"memory": {
 							Type:     schema.TypeInt,
 							Optional: true,
 							ForceNew: true,
+							Description: "Memory, in (Gi) unit counts, that your service resource needs.",
 						},
 						"storage": {
 							Type:     schema.TypeInt,
 							Optional: true,
 							ForceNew: true,
+							Description: "Storage, in (Gb) unit counts, that your service resource needs.",
 						},
 					},
 				},

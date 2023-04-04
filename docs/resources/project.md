@@ -3,12 +3,12 @@
 page_title: "ametnes_project Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages an ametnes cloud project. An ametnes cloud resource must be created in a project.
+  Creates and manages an ametnes cloud project. All Ametnes cloud resources must be created in a project.
 ---
 
 # ametnes_project (Resource)
 
-Creates and manages an ametnes cloud project. An ametnes cloud resource must be created in a project.
+Creates and manages an ametnes cloud project. All Ametnes cloud resources must be created in a project.
 
 ## Example Usage
 

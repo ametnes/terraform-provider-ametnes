@@ -12,7 +12,7 @@ import (
 func resourceProject() *schema.Resource {
 	return &schema.Resource{
 		Description: `
-Creates and manages an ametnes cloud project. An ametnes cloud resource must be created in a project.
+Creates and manages an ametnes cloud project. All Ametnes cloud resources must be created in a project.
 `,
 		CreateContext: resourceProjectCreate,
 		ReadContext:   dataSourceProjectRead,

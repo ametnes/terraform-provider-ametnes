@@ -18,7 +18,7 @@ const DefaultNodes = 1
 func resourceNetwork() *schema.Resource {
 	return &schema.Resource{
 		Description: `
-Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or just an object that manages a set of NodePort(s).
+Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
 `,
 		CreateContext: resourceNetworkCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
