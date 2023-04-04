@@ -87,5 +87,5 @@ output "mysql_connections" {
 
 - `auth_type` (String)
 - `host` (String) The API host.
-- `insecure` (Boolean)
-- `timeout` (Number) The http client timeout
+- `insecure` (Boolean) `true` if you do not want any tls validation. Defaults to `false`
+- `timeout` (Number) The http client timeout. Defaults to `120` seconds.
