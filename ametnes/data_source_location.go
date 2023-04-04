@@ -44,27 +44,27 @@ Read a data service location
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				Description: "Name of the data source",
+				Description: "Name of the data source.",
 			},
 			"code": {
 				Type:     schema.TypeString,
 				Required: true,
-				Description: "A unique code of the data source",
+				Description: "A unique code of the data source.",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Computed: true,
-				Description: "Alternative ocation unique code",
+				Description: "Alternative ocation unique code.",
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
-				Description: "`true` if the location is enabled",
+				Description: "`true` if the location is enabled.",
 			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
-				Description: "Status of the location such as `OFFLINE`, `ONLINE`",
+				Description: "Status of the location such as `OFFLINE`, `ONLINE`.",
 			},
 		},
 	}

@@ -3,12 +3,12 @@
 page_title: "ametnes_kinds Data Source - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Read resource kinds metadata
+  Read resource kinds metadata.
 ---
 
 # ametnes_kinds (Data Source)
 
-Read resource kinds metadata
+Read resource kinds metadata.
 
 ## Example Usage
 

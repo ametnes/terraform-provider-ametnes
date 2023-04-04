@@ -38,14 +38,14 @@ data "ametnes_location" "location" {
 
 ### Required
 
-- `code` (String) A unique code of the data source
-- `name` (String) Name of the data source
+- `code` (String) A unique code of the data source.
+- `name` (String) Name of the data source.
 
 ### Read-Only
 
-- `enabled` (Boolean) `true` if the location is enabled
+- `enabled` (Boolean) `true` if the location is enabled.
 - `id` (String) The ID of this resource.
-- `location` (String) Alternative ocation unique code
-- `status` (String) Status of the location such as `OFFLINE`, `ONLINE`
+- `location` (String) Alternative ocation unique code.
+- `status` (String) Status of the location such as `OFFLINE`, `ONLINE`.
 
 

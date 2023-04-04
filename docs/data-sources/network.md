@@ -48,17 +48,17 @@ data "ametnes_network" "network" {
 
 ### Required
 
-- `location` (String) Location of the network access resource
-- `name` (String) Name of the network access resource
-- `project` (String) Ametnes cloud project of the network access resource
+- `location` (String) Location of the network access resource.
+- `name` (String) Name of the network access resource.
+- `project` (String) Ametnes cloud project of the network access resource.
 
 ### Optional
 
-- `description` (String) Description of the network access resource
+- `description` (String) Description of the network access resource.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `kind` (String) Kind of the network access resource
+- `kind` (String) Kind of the network access resource.
 
 

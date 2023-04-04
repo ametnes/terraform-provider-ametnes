@@ -19,27 +19,27 @@ Read a network access resource
 			"project": {
 				Type:     schema.TypeString,
 				Required: true,
-				Description: "Ametnes cloud project of the network access resource",
+				Description: "Ametnes cloud project of the network access resource.",
 			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				Description: "Name of the network access resource",
+				Description: "Name of the network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: "Description of the network access resource",
+				Description: "Description of the network access resource.",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
-				Description: "Location of the network access resource",
+				Description: "Location of the network access resource.",
 			},
 			"kind": {
 				Type:     schema.TypeString,
 				Computed: true,
-				Description: "Kind of the network access resource",
+				Description: "Kind of the network access resource.",
 			},
 		},
 	}

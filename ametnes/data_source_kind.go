@@ -14,7 +14,7 @@ import (
 
 func dataSourceKinds() *schema.Resource {
 	return &schema.Resource{
-		Description: "Read resource kinds metadata",
+		Description: "Read resource kinds metadata.",
 		ReadContext: dataSourceKindsRead,
 		Schema: map[string]*schema.Schema{
 			"kinds": {
