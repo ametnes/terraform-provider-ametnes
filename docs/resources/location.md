@@ -3,14 +3,12 @@
 page_title: "ametnes_location Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages an Ametnes Data Service Location. An Ametnes Data Service Location is essentially a dedicated kubernetes cluster that is management by Ametnes and
-  has an Ametnes Cloud Agent installed. Data services are then created and managed in the cluster using this terraform provider.
+  Creates and manages an Ametnes Data Service location.
 ---
 
 # ametnes_location (Resource)
 
-Creates and manages an Ametnes Data Service Location. An Ametnes Data Service Location is essentially a dedicated kubernetes cluster that is management by Ametnes and
-has an Ametnes Cloud Agent installed. Data services are then created and managed in the cluster using this terraform provider.
+Creates and manages an Ametnes Data Service location.
 
 ## Example Usage
 
