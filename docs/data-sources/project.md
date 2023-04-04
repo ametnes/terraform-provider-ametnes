@@ -3,12 +3,12 @@
 page_title: "ametnes_project Data Source - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Read a project resource
+  Read an Ametnes cloud project resource
 ---
 
 # ametnes_project (Data Source)
 
-Read a project resource
+Read an Ametnes cloud project resource
 
 ## Example Usage
 
@@ -37,13 +37,13 @@ data "ametnes_project" "project" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the project
 
 ### Read-Only
 
-- `account_id` (Number)
-- `description` (String)
-- `enabled` (Boolean)
+- `account_id` (Number) Ametnes cloud account id of the project
+- `description` (String) Description of the project
+- `enabled` (Boolean) `false` if this project is disabled
 - `id` (String) The ID of this resource.
 
 

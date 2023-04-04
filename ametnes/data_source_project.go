@@ -11,25 +11,29 @@ import (
 func dataSourceProject() *schema.Resource {
 	return &schema.Resource{
 		Description: `
-Read a project resource
+Read an Ametnes cloud project resource
 `,
 		ReadContext: dataSourceProjectRead,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "Name of the project",
 			},
 			"account_id": {
 				Type:     schema.TypeInt,
 				Computed: true,
+				Description: "Ametnes cloud account id of the project",
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
+				Description: "`false` if this project is disabled",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "Description of the project",
 			},
 		},
 	}
