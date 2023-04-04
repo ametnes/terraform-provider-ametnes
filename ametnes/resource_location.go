@@ -9,6 +9,9 @@ import (
 
 func resourceLocation() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Creates and manages an Ametnes Data Service location.
+`,
 		ReadContext:   dataSourceLocationsRead,
 		CreateContext: resourceLocationCreate,
 		DeleteContext: resourceLocationDelete,
@@ -17,16 +20,20 @@ func resourceLocation() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "The name of the data service location.",
+
 			},
 			"code": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "An easy identifier of the data service location. A combination of the `name` and `code` must be unique.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Description: "Description of the location.",
 			},
 			"location": {
 				Type:     schema.TypeString,
@@ -35,10 +42,12 @@ func resourceLocation() *schema.Resource {
 			"enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
+				Description: "`true` if this location is enabled and can have resources created in it.",
 			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "The status of the data service location. This can be `OFFLINE` or `ONLINE`",
 			},
 		},
 	}

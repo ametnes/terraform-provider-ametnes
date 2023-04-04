@@ -12,133 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-/*
-# curl -k -X GET "https://api.cloud.ametnes.com/v1/metadata/resources/kinds"
-{
-  "count": 7,
-  "results": [
-    {
-      "backups": {
-        "enabled": false
-      },
-      "id": "net.privatelink10",
-      "kind": "network/privatelink:1.0",
-      "limits": null,
-      "locations": [
-        "aws/eu-west-2"
-      ],
-      "name": "Private Link Network",
-      "release": null,
-      "tools": null,
-      "type": "network/privatelink"
-    },
-    {
-      "backups": {
-        "enabled": true
-      },
-      "id": "svc.mysql80",
-      "kind": "service/mysql:8.0",
-      "limits": null,
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "MySql 8.0 Service",
-      "release": null,
-      "tools": null,
-      "type": "service/mysql"
-    },
-    {
-      "backups": {
-        "enabled": false
-      },
-      "id": "svc.neo4j42",
-      "kind": "service/neo4j:4.2",
-      "limits": {
-        "nodes": [
-          1,
-          3
-        ]
-      },
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "Neo4J 4.2 Service",
-      "release": null,
-      "tools": null,
-      "type": "service/neo4j"
-    },
-    {
-      "backups": {
-        "enabled": true
-      },
-      "id": "svc.postgres119",
-      "kind": "service/postgres:11.9",
-      "limits": null,
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "Postgres 11.9 Service",
-      "release": null,
-      "tools": null,
-      "type": "service/postgres"
-    },
-    {
-      "backups": {
-        "enabled": true
-      },
-      "id": "svc.postgres124",
-      "kind": "service/postgres:12.4",
-      "limits": null,
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "Postgres 12.4 Service",
-      "release": null,
-      "tools": null,
-      "type": "service/postgres"
-    },
-    {
-      "backups": {
-        "enabled": true
-      },
-      "id": "svc.postgres130",
-      "kind": "service/postgres:13.0",
-      "limits": null,
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "Postgres 13.0 Service",
-      "release": null,
-      "tools": null,
-      "type": "service/postgres"
-    },
-    {
-      "backups": {
-        "enabled": false
-      },
-      "id": "svc.redis62",
-      "kind": "service/redis:6.2",
-      "limits": null,
-      "locations": [
-        "gcp/europe-west2",
-        "aws/eu-west-2"
-      ],
-      "name": "Redis 6.2 Service",
-      "release": "beta",
-      "tools": null,
-      "type": "service/redis"
-    }
-  ]
-}
-*/
-
 func dataSourceKinds() *schema.Resource {
 	return &schema.Resource{
+		Description: "Read resource kinds metadata.",
 		ReadContext: dataSourceKindsRead,
 		Schema: map[string]*schema.Schema{
 			"kinds": {
@@ -149,14 +25,17 @@ func dataSourceKinds() *schema.Resource {
 						"id": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Unique backend identifier for the resource kind. Example: `e834def`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Name of the resource kind.",
 						},
 						"kind": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Kind code to be used when creating resources. Example `service/grafana:8.3`",
 						},
 						"locations": {
 							Type:     schema.TypeList,
@@ -176,6 +55,7 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
+							Description: "`true` if backups are enabled for this resource kind",
 						},
 						"tools": {
 							Type:     schema.TypeList,
@@ -204,10 +84,12 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
+							Description: "Capacity limits for ths resource kind. These include `memory`, `cpu` and `storage` as well as the number of `nodes` that can be scaled to.",
 						},
 						"type": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Global kind code to be used only for information. Example `service/grafana`",
 						},
 						"release": {
 							Type:     schema.TypeString,
@@ -216,6 +98,7 @@ func dataSourceKinds() *schema.Resource {
 						"enabled": {
 							Type:     schema.TypeBool,
 							Computed: true,
+							Description: "`true` if resourcees of this kind can be created.",
 						},
 					},
 				},

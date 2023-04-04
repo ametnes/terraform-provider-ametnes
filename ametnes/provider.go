@@ -37,7 +37,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     120,
-				Description: "The http client timeout",
+				Description: "The http client timeout. Defaults to `120` seconds.",
 			},
 			"host": {
 				Type:        schema.TypeString,
@@ -49,6 +49,7 @@ func Provider() *schema.Provider {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
+				Description: "`true` if you do not want any tls validation. Defaults to `false`",
 			},
 		},
 		ConfigureContextFunc: func(ctx context.Context, data *schema.ResourceData) (interface{}, diag.Diagnostics) {

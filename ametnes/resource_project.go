@@ -11,6 +11,9 @@ import (
 
 func resourceProject() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Creates and manages an ametnes cloud project. All Ametnes cloud resources must be created in a project.
+`,
 		CreateContext: resourceProjectCreate,
 		ReadContext:   dataSourceProjectRead,
 		DeleteContext: resourceProjectDelete,
@@ -19,15 +22,18 @@ func resourceProject() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "The name of the project.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Description: "The description of the project.",
 			},
 			"account_id": {
 				Type:     schema.TypeInt,
 				Computed: true,
+				Description: "The account where the project is created.",
 			},
 			"enabled": {
 				Type:     schema.TypeBool,

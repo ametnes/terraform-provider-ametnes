@@ -36,27 +36,35 @@ import (
 
 func dataSourceLocation() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read a data service location
+`,
 		ReadContext: dataSourceLocationsRead,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "Name of the data source.",
 			},
 			"code": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "A unique code of the data source.",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "Alternative ocation unique code.",
 			},
 			"enabled": {
 				Type:     schema.TypeBool,
 				Computed: true,
+				Description: "`true` if the location is enabled.",
 			},
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "Status of the location such as `OFFLINE`, `ONLINE`.",
 			},
 		},
 	}

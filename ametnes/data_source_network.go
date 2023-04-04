@@ -11,27 +11,35 @@ import (
 
 func dataSourceNetwork() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read a network access resource.
+`,
 		ReadContext: dataSourceNetworksRead,
 		Schema: map[string]*schema.Schema{
 			"project": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "Ametnes cloud project of the network access resource.",
 			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "Name of the network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Description: "Description of the network access resource.",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "Location of the network access resource.",
 			},
 			"kind": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "Kind of the network access resource.",
 			},
 		},
 	}
