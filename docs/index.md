@@ -42,6 +42,8 @@ resource "ametnes_location" "location" {
 }
 ```
 
+Alternatively, you can create a service location in the [Ametnes Cloud](https://cloud.ametnes.com/) console. `Service Locations` -> `New` and take note of the location id.
+
 ### Setting up an Ametnes Data Service location.
 Using the location id from above, setup your data service location. See instructions [Ametnes Data Service setup](https://github.com/ametnes/examples/tree/main/ametnes-cloud-agent)
 

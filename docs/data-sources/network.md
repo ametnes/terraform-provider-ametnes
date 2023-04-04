@@ -3,12 +3,12 @@
 page_title: "ametnes_network Data Source - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Read a network access resource
+  Read a network access resource.
 ---
 
 # ametnes_network (Data Source)
 
-Read a network access resource
+Read a network access resource.
 
 ## Example Usage
 
