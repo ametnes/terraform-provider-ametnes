@@ -17,6 +17,9 @@ const DefaultNodes = 1
 
 func resourceNetwork() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or just an object that manages a set of NodePort(s).
+`,
 		CreateContext: resourceNetworkCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
 		DeleteContext: resourceServiceOrNetworkDelete,
@@ -27,27 +30,32 @@ func resourceNetwork() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true, // if the project name changes then we need to force new resource
+				Description: "The `project` id of the project to create your network access resource.",
 			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true, // if the name changes the we need to create a new resource
+				Description: "The unique name of your network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Description: "The description of your network access resource.",
 			},
 			"kind": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 				Default:  "loadbalancer:1.0",
+				Description: "The `kind` of your network access resource.",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "The location id of your ametnes data service location to creat this network access resource in.",
 			},
 
 			// computed

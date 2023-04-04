@@ -10,6 +10,9 @@ import (
 
 func dataSourceProject() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read a project resource
+`,
 		ReadContext: dataSourceProjectRead,
 		Schema: map[string]*schema.Schema{
 			"name": {

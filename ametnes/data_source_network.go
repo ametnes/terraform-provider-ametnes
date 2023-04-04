@@ -11,6 +11,9 @@ import (
 
 func dataSourceNetwork() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read a network access resource
+`,
 		ReadContext: dataSourceNetworksRead,
 		Schema: map[string]*schema.Schema{
 			"project": {

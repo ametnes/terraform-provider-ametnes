@@ -15,6 +15,9 @@ const DefaultProductCode = 3795211474
 
 func resourceService() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Creates and manages a data service resource. All data service resources created must be attached to a network resource.
+`,
 		CreateContext: resourceServiceCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
 		DeleteContext: resourceServiceOrNetworkDelete,
@@ -25,26 +28,31 @@ func resourceService() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true, // if the project changes then we need to force new resource
+				Description: "The `project` id of the project to create your network access resource.",
 			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true, // if the name changes the we need to create a new resource
+				Description: "The unique name of your network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Description: "The description of your network access resource.",
 			},
 			"kind": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`",
 			},
 			"location": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+				Description: "The location id of your ametnes data service location to creat this data service resource in.",
 			},
 			"capacity": {
 				Type:     schema.TypeList,
@@ -52,6 +60,7 @@ func resourceService() *schema.Resource {
 				ForceNew: true,
 				Optional: true,
 				MaxItems: 1,
+				Description: "Capacity specs for your data service resource.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cpu": {
@@ -77,6 +86,7 @@ func resourceService() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: true,
 				ForceNew: true,
+				Description: "Number of nodes for your data service resource.",
 			},
 			"config": {
 				Type:     schema.TypeMap,
@@ -84,6 +94,7 @@ func resourceService() *schema.Resource {
 				ForceNew: true,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
+				Description: "Configuration details for your data service resource.",
 			},
 			// computed
 			"network": {
@@ -91,6 +102,7 @@ func resourceService() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 				Computed: true,
+				Description: "Network resource your data service resource will be attached to in order to expose it.",
 			},
 			"resource_id": {
 				Type:     schema.TypeString,
@@ -107,6 +119,7 @@ func resourceService() *schema.Resource {
 			"connections": {
 				Type:     schema.TypeList,
 				Computed: true,
+				Description: "Connection details to access your data service resource.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {

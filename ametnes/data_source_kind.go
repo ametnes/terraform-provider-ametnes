@@ -139,6 +139,9 @@ import (
 
 func dataSourceKinds() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read resource kinds metadata
+`,
 		ReadContext: dataSourceKindsRead,
 		Schema: map[string]*schema.Schema{
 			"kinds": {
@@ -149,14 +152,17 @@ func dataSourceKinds() *schema.Resource {
 						"id": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Unique backend identifier for the resource kind. Example: `e834def`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Name of the resource kind.",
 						},
 						"kind": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Kind code to be used when creating resources. Example `service/grafana:8.3`",
 						},
 						"locations": {
 							Type:     schema.TypeList,
@@ -176,6 +182,7 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
+							Description: "`true` if backups are enabled for this resource kind",
 						},
 						"tools": {
 							Type:     schema.TypeList,
@@ -204,10 +211,12 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
+							Description: "Capacity limits for ths resource kind. These include `memory`, `cpu` and `storage` as well as the number of `nodes` that can be scaled to.",
 						},
 						"type": {
 							Type:     schema.TypeString,
 							Computed: true,
+							Description: "Global kind code to be used only for information. Example `service/grafana`",
 						},
 						"release": {
 							Type:     schema.TypeString,
@@ -216,6 +225,7 @@ func dataSourceKinds() *schema.Resource {
 						"enabled": {
 							Type:     schema.TypeBool,
 							Computed: true,
+							Description: "`true` if this resource of this kind can be created.",
 						},
 					},
 				},

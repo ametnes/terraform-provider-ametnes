@@ -36,6 +36,9 @@ import (
 
 func dataSourceLocation() *schema.Resource {
 	return &schema.Resource{
+		Description: `
+Read a data service location
+`,
 		ReadContext: dataSourceLocationsRead,
 		Schema: map[string]*schema.Schema{
 			"name": {
