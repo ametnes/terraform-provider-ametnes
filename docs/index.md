@@ -15,7 +15,7 @@ The Ametnes cloud provider provides management resources for
 ### Setting up an Ametnes Data Service location.
 See instructions [Ametnes Data Service setup](https://github.com/ametnes/examples/tree/main/ametnes-cloud-agent)
 
-## Authentication
+### Authentication
 To use this provider, you need to generate an authentication token (aka API key) in your Ametnes Cloud account. `User` -> `Edit` your user -> `Get User Token`.
 Ensure the generated user token is kept in a secure place as it will not be visible again.
 
