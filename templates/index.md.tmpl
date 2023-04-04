@@ -2,7 +2,7 @@
 layout: ""
 page_title: "Provider: Ametnes Cloud"
 description: |-
-  Creates and manages resources in an Ametnes Data Service Location. An Ametnes Data Service Location is essentially a dedicated kubernetes cluster with an Ametnes Cloud Agent installed. Data services are then created and managed in the cluster using this terraform provider.
+  Creates and manages resources in an Ametnes Data Service location. An Ametnes Data Service location is essentially a dedicated kubernetes cluster with an Ametnes Cloud Agent installed. Data services are then created and managed in the cluster using this terraform provider.
 ---
 
 # Ametnes Cloud Provider
@@ -12,15 +12,20 @@ The Ametnes cloud provider provides management resources for
 
 ## Example Usage
 
-### Setting up an Ametnes Data Service location.
-See instructions [Ametnes Data Service setup](https://github.com/ametnes/examples/tree/main/ametnes-cloud-agent)
-
 ### Authentication
 To use this provider, you need to generate an authentication token (aka API key) in your Ametnes Cloud account. `User` -> `Edit` your user -> `Get User Token`.
 Ensure the generated user token is kept in a secure place as it will not be visible again.
 
+### Creating locations using the Ametnes Cloud provider.
+
+{{ tffile "examples/provider/example-location.tf" }}
+
+### Setting up an Ametnes Data Service location.
+Using the location id from above, setup your data service location. See instructions [Ametnes Data Service setup](https://github.com/ametnes/examples/tree/main/ametnes-cloud-agent)
+
 ### Creating resources using the Ametnes Cloud provider.
 
-{{ tffile "examples/provider/example.tf" }}
+{{ tffile "examples/provider/example-resources.tf" }}
+
 
 {{ .SchemaMarkdown | trimspace }}
