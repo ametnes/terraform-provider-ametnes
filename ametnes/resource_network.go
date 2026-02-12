@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -22,6 +23,7 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 `,
 		CreateContext: resourceNetworkCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
+		UpdateContext: resourceNetworkUpdate,
 		DeleteContext: resourceServiceOrNetworkDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -35,13 +37,11 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true, // if the name changes the we need to create a new resource
 				Description: "The unique name of your network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 				Description: "The description of your network access resource.",
 			},
 			"kind": {
@@ -139,4 +139,64 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	// we will not reach here
 	return nil
+}
+
+func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Check if any updatable fields have changed
+	hasChanges := d.HasChange("name") || d.HasChange("description")
+
+	if hasChanges {
+		client := m.(*Client)
+
+		ids := strings.Split(d.Id(), "/")
+		projectID, err := strconv.Atoi(ids[0])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		resourceID, err := strconv.Atoi(ids[1])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Get the existing resource to preserve other fields
+		existingResource, err := client.GetResource(projectID, resourceID)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to get existing resource: %w", err))
+		}
+
+		// Get updated fields
+		name := d.Get("name").(string)
+		description := ""
+		if desc, ok := d.GetOk("description"); ok {
+			description = desc.(string)
+		}
+
+		// Update the resource with new values
+		updateResource := Resource{
+			Id:          existingResource.Id,
+			Project:     existingResource.Project,
+			Account:     existingResource.Account,
+			Kind:        existingResource.Kind,
+			Location:    existingResource.Location,
+			Network:     existingResource.Network,
+			Name:        name,
+			Status:      existingResource.Status,
+			Description: description,
+			Product:     existingResource.Product,
+			Spec: Spec{
+				Components: existingResource.Spec.Components,
+				Nodes:      existingResource.Spec.Nodes,
+				Config:     existingResource.Spec.Config,
+				Networks:   existingResource.Spec.Networks,
+			},
+		}
+
+		_, err = client.UpdateResource(updateResource)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to update resource: %w", err))
+		}
+	}
+
+	// Read the updated resource state
+	return resourceServiceOrNetworkRead(ctx, d, m)
 }

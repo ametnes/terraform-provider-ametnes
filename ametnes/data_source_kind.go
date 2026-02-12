@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -124,14 +125,43 @@ func dataSourceKindsRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 	defer r.Body.Close()
 
-	var kinds map[string]interface{}
-	err = json.NewDecoder(r.Body).Decode(&kinds)
+	// Check HTTP status code
+	if r.StatusCode != http.StatusOK {
+		bodyBytes, _ := ioutil.ReadAll(r.Body)
+		return diag.Errorf("API request failed with status %d: %s", r.StatusCode, string(bodyBytes))
+	}
+
+	// Read body for JSON decoding
+	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	m_kinds := make([]interface{}, len(kinds["results"].([]interface{})))
-	for idx, __kind := range kinds["results"].([]interface{}) {
+	var kinds map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &kinds)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Check if results exists and is not nil
+	results, ok := kinds["results"]
+	if !ok || results == nil {
+		// If no results, set empty list
+		if err := d.Set("kinds", []interface{}{}); err != nil {
+			return diag.FromErr(err)
+		}
+		d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
+		return diags
+	}
+
+	// Check if results is actually a slice
+	resultsSlice, ok := results.([]interface{})
+	if !ok {
+		return diag.Errorf("expected 'results' to be a slice, got %T", results)
+	}
+
+	m_kinds := make([]interface{}, len(resultsSlice))
+	for idx, __kind := range resultsSlice {
 		kind := __kind.(map[string]interface{})
 		_kind := make(map[string]interface{})
 		_kind["id"] = kind["id"]

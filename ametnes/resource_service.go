@@ -21,90 +21,84 @@ Creates and manages a data service resource. All data service resources created 
 		CreateContext: resourceServiceCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
 		DeleteContext: resourceServiceOrNetworkDelete,
+		UpdateContext: resourceServiceUpdate,
 
 		Schema: map[string]*schema.Schema{
 
 			"project": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true, // if the project changes then we need to force new resource
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true, // if the project changes then we need to force new resource
 				Description: "The `project` id of the project to create your network access resource.",
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true, // if the name changes the we need to create a new resource
+				Type:        schema.TypeString,
+				Required:    true,
 				Description: "The unique name of your network access resource.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Optional:    true,
 				Description: "The description of your network access resource.",
 			},
 			"kind": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
 				Description: "The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`",
 			},
 			"location": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
 				Description: "The location id of your ametnes data service location to creat this data service resource in.",
 			},
 			"capacity": {
-				Type:     schema.TypeList,
-				Required: false,
-				ForceNew: true,
-				Optional: true,
-				MaxItems: 1,
+				Type:        schema.TypeList,
+				Required:    false,
+				Optional:    true,
+				MaxItems:    1,
 				Description: "Capacity specs for your data service resource.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cpu": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
 							Description: "Cpu, in unit counts, that your service resource needs.",
 						},
 
 						"memory": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
 							Description: "Memory, in (Gi) unit counts, that your service resource needs.",
 						},
 						"storage": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
 							Description: "Storage, in (Gb) unit counts, that your service resource needs.",
 						},
 					},
 				},
 			},
 			"nodes": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ForceNew: true,
-				Description: "Number of nodes for your data service resource.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     1,
+				Description: "Number of nodes for your data service resource. Defaults to `1` if not specified.",
 			},
 			"config": {
-				Type:     schema.TypeMap,
-				Required: false,
-				ForceNew: true,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:        schema.TypeMap,
+				Required:    false,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Configuration details for your data service resource.",
 			},
 			// computed
 			"network": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Computed:    true,
 				Description: "Network resource your data service resource will be attached to in order to expose it.",
 			},
 			"resource_id": {
@@ -120,8 +114,8 @@ Creates and manages a data service resource. All data service resources created 
 				Computed: true,
 			},
 			"connections": {
-				Type:     schema.TypeList,
-				Computed: true,
+				Type:        schema.TypeList,
+				Computed:    true,
 				Description: "Connection details to access your data service resource.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -171,6 +165,9 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		config = v.(map[string]interface{})
 	}
 
+	// get nodes, defaults to 1 if not provided (via schema Default)
+	nodes := d.Get("nodes").(int)
+
 	// we add service as prefix for service resource as thats how
 	// server differentiates from other resources like network.
 	prefixedKind := fmt.Sprintf("service/%s", kind)
@@ -186,7 +183,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 				"storage": capacity.Storage,
 				"memory":  capacity.Memory,
 			},
-			Nodes:  d.Get("nodes").(int),
+			Nodes:  nodes,
 			Config: config,
 		},
 	}
@@ -234,6 +231,91 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	return nil
 }
 
+func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Prevent changing the network field
+	if d.HasChange("network") {
+		return diag.Errorf("Changing the 'network' field is not permitted for this resource. You must destroy and recreate the resource to use a different network.")
+	}
+
+	// Check if any updatable fields have changed
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("capacity") || 
+		d.HasChange("nodes") || d.HasChange("config")
+
+	if hasChanges {
+		client := m.(*Client)
+
+		ids := strings.Split(d.Id(), "/")
+		projectID, err := strconv.Atoi(ids[0])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		resourceID, err := strconv.Atoi(ids[1])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Get the existing resource to preserve other fields
+		existingResource, err := client.GetResource(projectID, resourceID)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to get existing resource: %w", err))
+		}
+
+		// Get updated fields
+		name := d.Get("name").(string)
+		description := ""
+		if desc, ok := d.GetOk("description"); ok {
+			description = desc.(string)
+		}
+
+		// Get the capacity
+		capacity, err := expandCapacitySchema(d.Get("capacity").([]interface{}))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Get nodes, defaults to 1 if not provided
+		nodes := d.Get("nodes").(int)
+
+		// Get the config
+		var config map[string]interface{}
+		if v, ok := d.GetOk("config"); ok {
+			config = v.(map[string]interface{})
+		}
+
+		// Update the resource with new values
+		updateResource := Resource{
+			Id:          existingResource.Id,
+			Project:     existingResource.Project,
+			Account:     existingResource.Account,
+			Kind:        existingResource.Kind,
+			Location:    existingResource.Location,
+			Network:     existingResource.Network,
+			Name:        name,
+			Status:      existingResource.Status,
+			Description: description,
+			Product:     existingResource.Product,
+			Spec: Spec{
+				Components: map[string]interface{}{
+					"cpu":     capacity.Cpu,
+					"storage": capacity.Storage,
+					"memory":  capacity.Memory,
+				},
+				Nodes:    nodes,
+				Config:   config,
+				Networks: existingResource.Spec.Networks,
+			},
+		}
+
+		_, err = client.UpdateResource(updateResource)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to update resource: %w", err))
+		}
+	}
+
+	// Read the updated resource state
+	return resourceServiceOrNetworkRead(ctx, d, m)
+}
+
 func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	client := m.(*Client)
@@ -260,6 +342,40 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	d.Set("network", fmt.Sprint(resource.Network))
 	d.Set("status", resource.Status)
 	d.Set("account", fmt.Sprint(resource.Account))
+	d.Set("name", resource.Name)
+	d.Set("description", resource.Description)
+
+	// Set service-specific fields only for service resources
+	if strings.HasPrefix(resource.Kind, "service/") {
+		d.Set("nodes", resource.Spec.Nodes)
+
+		// Set capacity
+		if resource.Spec.Components != nil {
+			capacity := []map[string]interface{}{
+				{
+					"cpu":     resource.Spec.Components["cpu"],
+					"memory":  resource.Spec.Components["memory"],
+					"storage": resource.Spec.Components["storage"],
+				},
+			}
+			d.Set("capacity", capacity)
+		}
+	}
+
+	// Set config if it exists (only for service resources)
+	if strings.HasPrefix(resource.Kind, "service/") {
+		if resource.Spec.Config != nil && len(resource.Spec.Config) > 0 {
+			// Convert map[string]interface{} to map[string]string for schema
+			configMap := make(map[string]string)
+			for k, v := range resource.Spec.Config {
+				configMap[k] = fmt.Sprintf("%v", v)
+			}
+			d.Set("config", configMap)
+		} else {
+			// If config is empty or nil, set empty map
+			d.Set("config", make(map[string]string))
+		}
+	}
 
 	connections := []Connection{}
 	if resource.Spec.Connections != nil && len(resource.Spec.Connections) != 0 {
