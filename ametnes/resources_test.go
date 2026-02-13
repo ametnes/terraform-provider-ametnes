@@ -1,11 +1,8 @@
 package ametnes
 
 import (
-	"crypto/tls"
-	"net/http"
-	"testing"
-
 	"context"
+	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
@@ -14,47 +11,28 @@ import (
 
 // Existing tests...
 
-func TestGetResources(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestGetResources_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	projects, err := client.GetProjects()
-	if err != nil {
-		t.Skipf("Skipping test due to authentication error: %v", err)
-		return
-	}
-
-	if len(projects) == 0 {
-		t.Skip("Skipping test: no projects found")
-		return
-	}
+	assert.NoError(t, err)
+	assert.Greater(t, len(projects), 0)
 
 	project := projects[0]
 
 	resources, err := client.GetResources(&project)
-	if err != nil {
-		t.Skipf("Skipping test due to error getting resources: %v", err)
-		return
-	}
+	assert.NoError(t, err)
 	assert.NotNil(t, resources)
 }
 
-func TestCreateAndGetResource(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestCreateAndGetResource_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	projects, err := client.GetProjects()
-	if err != nil {
-		t.Skipf("Skipping test due to authentication error: %v", err)
-		return
-	}
-
-	if len(projects) == 0 {
-		t.Skip("Skipping test: no projects found")
-		return
-	}
+	assert.NoError(t, err)
+	assert.Greater(t, len(projects), 0)
 
 	project := projects[0]
 
@@ -78,20 +56,12 @@ func TestCreateAndGetResource(t *testing.T) {
 	}
 
 	n_resource, err := client.CreateResource(resource)
-	assert.Nil(t, err)
-
-	if assert.NotNil(t, n_resource) {
-
-		// now we know that object isn't nil, we are safe to make
-		// further assertions without causing any errors
-		assert.Equal(t, "INIT", n_resource.Status)
-
-	}
+	assert.NoError(t, err)
+	assert.NotNil(t, n_resource)
+	assert.Equal(t, "INIT", n_resource.Status)
 
 	gresource, err2 := client.GetResource(project.Id, n_resource.Id)
-
-	assert.Nil(t, err2)
-
+	assert.NoError(t, err2)
 	assert.Equal(t, gresource.Kind, resource.Kind)
 }
 

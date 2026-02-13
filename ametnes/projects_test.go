@@ -1,26 +1,17 @@
 package ametnes
 
 import (
-	"crypto/tls"
-	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestProjects(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	// host := "https://api-test.cloud.ametnes.com/v1"
-	// username := "Brave.Microphone@ametnes.com"
-	// token := "a03of\\75Ven4ada7A0W1h1>21f=4}b5fadQdn458254e@b3Tb\\"
-
-	client := GetTestClient(t)
+func TestProjects_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	projects, err := client.GetProjects()
-	if err != nil {
-		t.Skipf("Skipping test due to authentication error: %v", err)
-		return
-	}
-	if len(projects) == 0 {
-		t.Skip("Skipping test: no projects found")
-		return
-	}
+	assert.NoError(t, err)
+	assert.Greater(t, len(projects), 0)
+	assert.Equal(t, "Test Project 1", projects[0].Name)
 }

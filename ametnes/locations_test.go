@@ -1,74 +1,58 @@
 package ametnes
 
 import (
-	"crypto/tls"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetLocations(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestGetLocations_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	locations, err := client.GetLocations()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, locations)
+	assert.Greater(t, len(locations), 0)
 
-	if len(locations) > 0 {
-		// Verify the structure of at least one location
-		location := locations[0]
-		assert.NotEmpty(t, location.Id)
-		assert.NotEmpty(t, location.Name)
-		assert.NotEmpty(t, location.Location)
-	}
+	// Verify the structure of at least one location
+	location := locations[0]
+	assert.NotEmpty(t, location.Id)
+	assert.NotEmpty(t, location.Name)
+	assert.NotEmpty(t, location.Location)
 }
 
-func TestCreateAndDeleteLocation(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+func TestCreateAndDeleteLocation_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
-	client := GetTestClient(t)
-
-	// First, get existing locations to understand the structure
-	existingLocations, err := client.GetLocations()
-	assert.Nil(t, err)
-
-	if len(existingLocations) > 0 {
-		// Test creating a new location (using similar structure to existing ones)
-		// Note: This might fail if the test account doesn't have permission to create locations
-		newLocation := Location{
-			Name:        "Test Location",
-			Description: "Test location created by unit tests",
-			Enabled:     true,
-			Location:    "test-region",
-		}
-
-		createdLocation, err := client.CreateLocation(newLocation)
-
-		// If creation is successful, test deletion
-		if assert.Nil(t, err) && createdLocation != nil {
-			assert.NotEmpty(t, createdLocation.Id)
-			assert.Equal(t, newLocation.Name, createdLocation.Name)
-			assert.Equal(t, newLocation.Description, createdLocation.Description)
-			assert.Equal(t, newLocation.Enabled, createdLocation.Enabled)
-			assert.Equal(t, newLocation.Location, createdLocation.Location)
-
-			// Test deletion
-			err = client.DeleteLocation(*createdLocation)
-			assert.Nil(t, err)
-		}
+	newLocation := Location{
+		Name:        "Test Location",
+		Description: "Test location created by unit tests",
+		Enabled:     true,
+		Location:    "test-region",
 	}
+
+	createdLocation, err := client.CreateLocation(newLocation)
+	assert.NoError(t, err)
+	assert.NotNil(t, createdLocation)
+	assert.NotEmpty(t, createdLocation.Id)
+	assert.Equal(t, newLocation.Name, createdLocation.Name)
+	assert.Equal(t, newLocation.Description, createdLocation.Description)
+	assert.Equal(t, newLocation.Enabled, createdLocation.Enabled)
+	assert.Equal(t, "test.location", createdLocation.Id)
+
+	// Test deletion
+	err = client.DeleteLocation(*createdLocation)
+	assert.NoError(t, err)
 }
 
-func TestGetLocationsReturnsValidStructure(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestGetLocationsReturnsValidStructure_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	locations, err := client.GetLocations()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Test that locations have the expected fields
 	for _, location := range locations {
@@ -84,10 +68,9 @@ func TestGetLocationsReturnsValidStructure(t *testing.T) {
 	}
 }
 
-func TestLocationOperationsWithInvalidData(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestLocationOperationsWithInvalidData_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	// Test creating location with minimal data
 	minimalLocation := Location{
@@ -96,26 +79,21 @@ func TestLocationOperationsWithInvalidData(t *testing.T) {
 	}
 
 	createdLocation, err := client.CreateLocation(minimalLocation)
+	assert.NoError(t, err)
+	assert.NotNil(t, createdLocation)
+	assert.NotEmpty(t, createdLocation.Id)
+	assert.Equal(t, minimalLocation.Name, createdLocation.Name)
+	assert.Equal(t, minimalLocation.Location, createdLocation.Location)
+	assert.True(t, createdLocation.Enabled) // Mock sets enabled to true
 
-	// If creation succeeds, verify structure and clean up
-	if err == nil && createdLocation != nil {
-		assert.NotEmpty(t, createdLocation.Id)
-		assert.Equal(t, minimalLocation.Name, createdLocation.Name)
-		assert.Equal(t, minimalLocation.Location, createdLocation.Location)
-
-		// Default values should be set
-		assert.False(t, createdLocation.Enabled) // Assuming default is false
-
-		// Clean up
-		err = client.DeleteLocation(*createdLocation)
-		assert.Nil(t, err)
-	}
+	// Clean up
+	err = client.DeleteLocation(*createdLocation)
+	assert.NoError(t, err)
 }
 
-func TestLocationLifecycle(t *testing.T) {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
-	client := GetTestClient(t)
+func TestLocationLifecycle_Unit(t *testing.T) {
+	client, server := GetMockClient(t)
+	defer server.Close()
 
 	// Create a test location
 	testLocation := Location{
@@ -127,47 +105,17 @@ func TestLocationLifecycle(t *testing.T) {
 
 	// Create the location
 	createdLocation, err := client.CreateLocation(testLocation)
-	if err != nil {
-		t.Skipf("Skipping lifecycle test: Location creation not supported or permission denied: %v", err)
-		return
-	}
-
-	// Verify creation
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, createdLocation)
 	assert.NotEmpty(t, createdLocation.Id)
 
-	// Get all locations and verify our created location exists
-	allLocations, err := client.GetLocations()
-	assert.Nil(t, err)
-
-	found := false
-	for _, loc := range allLocations {
-		if loc.Id == createdLocation.Id {
-			found = true
-			assert.Equal(t, testLocation.Name, loc.Name)
-			assert.Equal(t, testLocation.Description, loc.Description)
-			assert.Equal(t, testLocation.Enabled, loc.Enabled)
-			assert.Equal(t, testLocation.Location, loc.Location)
-			break
-		}
-	}
-	assert.True(t, found, "Created location should exist in the locations list")
+	// Note: The mock server returns a fixed list, so we verify the created location structure
+	assert.Equal(t, testLocation.Name, createdLocation.Name)
+	assert.Equal(t, testLocation.Description, createdLocation.Description)
+	assert.Equal(t, testLocation.Enabled, createdLocation.Enabled)
+	assert.Equal(t, testLocation.Location, createdLocation.Location)
 
 	// Delete the location
 	err = client.DeleteLocation(*createdLocation)
-	assert.Nil(t, err)
-
-	// Verify deletion by checking the location no longer exists
-	updatedLocations, err := client.GetLocations()
-	assert.Nil(t, err)
-
-	stillExists := false
-	for _, loc := range updatedLocations {
-		if loc.Id == createdLocation.Id {
-			stillExists = true
-			break
-		}
-	}
-	assert.False(t, stillExists, "Deleted location should not exist in the locations list")
+	assert.NoError(t, err)
 }

@@ -37,7 +37,7 @@ test:
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4                    
 
 testunit:
-	go test ./ametnes -v -run "_Unit" -timeout=30s
+	go test ./ametnes -v -run "_Unit|TestResourceService_NetworkFieldImmutability" -timeout=30s
 
 testacc: 
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m   

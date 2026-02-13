@@ -29,27 +29,27 @@ data "ametnes_network" "network" {
   location = data.ametnes_location.location.id
 }
 
-resource "ametnes_service" "grafana" {
-  name = "grafana43333"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-  kind = "grafana:9.3"
-  description = "sample grafana"
-  network = data.ametnes_network.network.id
-  capacity {
-    storage = 1
-    memory = 1
-    cpu = 1
-  }
+# resource "ametnes_service" "grafana" {
+#   name = "grafana43333"
+#   project = data.ametnes_project.project.id
+#   location = data.ametnes_location.location.id
+#   kind = "grafana:9.3"
+#   description = "sample grafana"
+#   network = data.ametnes_network.network.id
+#   capacity {
+#     storage = 1
+#     memory = 1
+#     cpu = 1
+#   }
 
-  config = {
-    "auth.azuread.client_id" = "SomeText"
-    "auth.azuread.client_secret" = "SomeText"
-  }
+#   config = {
+#     "auth.azuread.client_id" = "SomeText"
+#     "auth.azuread.client_secret" = "SomeText"
+#   }
  
-  nodes = 1
-}
+#   nodes = 1
+# }
 
-output "gfn_connections" {
-  value = ametnes_service.grafana.connections
-}
+# output "gfn_connections" {
+#   value = ametnes_service.grafana.connections
+# }
