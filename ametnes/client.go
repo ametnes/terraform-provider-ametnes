@@ -99,7 +99,15 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 				close(respChan)
 				return
 			}
-			if resource.Status != "INIT" && resource.Status != "ERROR" {
+			if resource.Status == "ERROR" {
+				respChan <- Status{
+					Success: false,
+					Error:   fmt.Errorf("resource %d entered ERROR state", resourceID),
+				}
+				close(respChan)
+				return
+			}
+			if resource.Status != "INIT" {
 				respChan <- Status{
 					Success: true,
 				}

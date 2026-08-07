@@ -1,55 +1,69 @@
 terraform {
   required_providers {
     ametnes = {
-      # version = "0.3"
       source  = "ametnes.com/cloud/ametnes"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
     }
   }
 }
 
 provider "ametnes" {
-  // add you provider here
-  host = "https://cloud.ametnes.com/api/c/v1"
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
+provider "random" {}
+
 data "ametnes_project" "project" {
-  name = "Default"
+  name = var.project_name
 }
 
 data "ametnes_location" "location" {
-  name = "Ametnes"
-  code = "DSL-USE1"
+  name = var.location_name
+  code = var.location_code
 }
 
-data "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
-  project = data.ametnes_project.project.id
+resource "ametnes_network" "network" {
+  name     = var.network_name
+  project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
 }
 
-# resource "ametnes_service" "grafana" {
-#   name = "grafana43333"
-#   project = data.ametnes_project.project.id
-#   location = data.ametnes_location.location.id
-#   kind = "grafana:9.3"
-#   description = "sample grafana"
-#   network = data.ametnes_network.network.id
-#   capacity {
-#     storage = 1
-#     memory = 1
-#     cpu = 1
-#   }
+data "ametnes_network" "network" {
+  name       = var.network_name
+  project    = data.ametnes_project.project.id
+  location   = data.ametnes_location.location.id
+  depends_on = [ametnes_network.network]
+}
 
-#   config = {
-#     "auth.azuread.client_id" = "SomeText"
-#     "auth.azuread.client_secret" = "SomeText"
-#   }
- 
-#   nodes = 1
-# }
+resource "random_string" "service_alias" {
+  for_each = { for idx, svc in var.services : tostring(idx) => svc }
+  length   = 5
+  special  = false
+  upper    = false
+}
 
-# output "gfn_connections" {
-#   value = ametnes_service.grafana.connections
-# }
+resource "ametnes_service" "service" {
+  for_each    = { for idx, svc in var.services : tostring(idx) => svc }
+  name        = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project     = data.ametnes_project.project.id
+  location    = data.ametnes_location.location.id
+  kind        = each.value.kind
+  alias       = random_string.service_alias[each.key].result
+  network     = data.ametnes_network.network.id
+  capacity {
+    storage = each.value.storage
+  }
+  config = {
+    architecture = each.value.architecture
+    "admin.email" = var.username
+  }
+  nodes = 1
+}
+
+output "service_connections" {
+  value = { for k, svc in ametnes_service.service : k => svc.connections }
+}

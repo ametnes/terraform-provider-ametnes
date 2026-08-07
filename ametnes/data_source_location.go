@@ -2,6 +2,7 @@ package ametnes
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -78,6 +79,13 @@ func dataSourceLocationsRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	locations, err := client.GetLocations()
 	if err != nil {
+		// Check if this is an authentication error
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "401") || 
+			strings.Contains(errMsg, "Unauthorized") ||
+			strings.Contains(errMsg, "status: 401") {
+			return diag.Errorf("Authentication failed: %v", err)
+		}
 		return diag.FromErr(err)
 	}
 	var foundLocation *Location

@@ -57,14 +57,15 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 				ForceNew: true,
 				Description: "The location id of your ametnes data service location to creat this network access resource in.",
 			},
+			"config": {
+				Type:        schema.TypeMap,
+				Required:    false,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "Configuration details for your network access resource.",
+			},
 
 			// computed
-			"network": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				Computed: true,
-			},
 			"resource_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -97,6 +98,11 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 	kind := d.Get("kind").(string)
 
+	var config map[string]interface{}
+	if v, ok := d.GetOk("config"); ok {
+		config = v.(map[string]interface{})
+	}
+
 	// we add network as prefix for network resource as thats how
 	// server differentiates from other resources like service.
 	prefixedKind := fmt.Sprintf("network/%s", kind)
@@ -112,13 +118,11 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 				"storage": DefaultStorage,
 				"memory":  DefaultMemory,
 			},
-			Nodes: DefaultNodes,
+			Nodes:  DefaultNodes,
+			Config: config,
 		},
 	}
 
-	if net, ok := d.GetOk("network"); ok {
-		resource.Network = net.(int)
-	}
 	network, err := client.CreateResource(resource)
 
 	if err != nil {
@@ -129,30 +133,31 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	select {
 	case res := <-respChan:
 		if res.Success {
-			// Identity function
 			d.SetId(fmt.Sprintf("%d/%d", projectID, network.Id))
 			return resourceServiceOrNetworkRead(ctx, d, m)
+		}
+		if res.Error != nil {
+			return diag.FromErr(res.Error)
 		}
 	case <-time.After(15 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 
-	// we will not reach here
-	return nil
+	return diag.Errorf("Unknown error while checking for state")
 }
 
 func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Check if any updatable fields have changed
-	hasChanges := d.HasChange("name") || d.HasChange("description")
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("config")
 
 	if hasChanges {
 		client := m.(*Client)
 
-		ids := strings.Split(d.Id(), "/")
-		projectID, err := strconv.Atoi(ids[0])
+		projectID, err := strconv.Atoi(d.Get("project").(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		ids := strings.Split(d.Id(), "/")
 		resourceID, err := strconv.Atoi(ids[1])
 		if err != nil {
 			return diag.FromErr(err)
@@ -171,6 +176,12 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			description = desc.(string)
 		}
 
+		// Get the config
+		var config map[string]interface{}
+		if v, ok := d.GetOk("config"); ok {
+			config = v.(map[string]interface{})
+		}
+
 		// Update the resource with new values
 		updateResource := Resource{
 			Id:          existingResource.Id,
@@ -186,7 +197,7 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			Spec: Spec{
 				Components: existingResource.Spec.Components,
 				Nodes:      existingResource.Spec.Nodes,
-				Config:     existingResource.Spec.Config,
+				Config:     config,
 				Networks:   existingResource.Spec.Networks,
 			},
 		}

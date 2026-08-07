@@ -93,6 +93,11 @@ Creates and manages a data service resource. All data service resources created 
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Configuration details for your data service resource.",
 			},
+			"alias": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "An optional alias for your data service resource.",
+			},
 			// computed
 			"network": {
 				Type:        schema.TypeString,
@@ -168,6 +173,11 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	// get nodes, defaults to 1 if not provided (via schema Default)
 	nodes := d.Get("nodes").(int)
 
+	alias := ""
+	if a, ok := d.GetOk("alias"); ok {
+		alias = a.(string)
+	}
+
 	// we add service as prefix for service resource as thats how
 	// server differentiates from other resources like network.
 	prefixedKind := fmt.Sprintf("service/%s", kind)
@@ -177,6 +187,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Location:    d.Get("location").(string),
 		Name:        d.Get("name").(string),
 		Description: description,
+		Alias:       alias,
 		Spec: Spec{
 			Components: map[string]interface{}{
 				"cpu":     capacity.Cpu,
@@ -219,16 +230,17 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	select {
 	case res := <-respChan:
 		if res.Success {
-			// Identity function
 			d.SetId(fmt.Sprintf("%d/%d", projectID, service.Id))
 			return resourceServiceOrNetworkRead(ctx, d, m)
+		}
+		if res.Error != nil {
+			return diag.FromErr(res.Error)
 		}
 	case <-time.After(45 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 
-	// we will not reach here
-	return nil
+	return diag.Errorf("Unknown error while checking for state")
 }
 
 func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -239,7 +251,7 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 	// Check if any updatable fields have changed
 	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("capacity") || 
-		d.HasChange("nodes") || d.HasChange("config")
+		d.HasChange("nodes") || d.HasChange("config") || d.HasChange("alias")
 
 	if hasChanges {
 		client := m.(*Client)
@@ -267,6 +279,11 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			description = desc.(string)
 		}
 
+		alias := ""
+		if a, ok := d.GetOk("alias"); ok {
+			alias = a.(string)
+		}
+
 		// Get the capacity
 		capacity, err := expandCapacitySchema(d.Get("capacity").([]interface{}))
 		if err != nil {
@@ -291,6 +308,7 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			Location:    existingResource.Location,
 			Network:     existingResource.Network,
 			Name:        name,
+			Alias:       alias,
 			Status:      existingResource.Status,
 			Description: description,
 			Product:     existingResource.Product,
@@ -339,11 +357,16 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		return nil
 	}
 	d.Set("resource_id", fmt.Sprint(resource.Id))
-	d.Set("network", fmt.Sprint(resource.Network))
 	d.Set("status", resource.Status)
 	d.Set("account", fmt.Sprint(resource.Account))
 	d.Set("name", resource.Name)
 	d.Set("description", resource.Description)
+	d.Set("alias", resource.Alias)
+
+	// Set network field only for service resources
+	if strings.HasPrefix(resource.Kind, "service/") {
+		d.Set("network", fmt.Sprintf("%d/%d", projectID, resource.Network))
+	}
 
 	// Set service-specific fields only for service resources
 	if strings.HasPrefix(resource.Kind, "service/") {
@@ -362,8 +385,8 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	// Set config if it exists (only for service resources)
-	if strings.HasPrefix(resource.Kind, "service/") {
+	// Set config if it exists (for both service and network resources)
+	if strings.HasPrefix(resource.Kind, "service/") || strings.HasPrefix(resource.Kind, "network/") {
 		if resource.Spec.Config != nil && len(resource.Spec.Config) > 0 {
 			// Convert map[string]interface{} to map[string]string for schema
 			configMap := make(map[string]string)

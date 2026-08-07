@@ -8,6 +8,7 @@ type Resource struct {
 	Location    string `json:"location,omitempty"`
 	Network     int    `json:"network,omitempty"`
 	Name        string `json:"name,omitempty"`
+	Alias       string `json:"alias,omitempty"`
 	Status      string `json:"status,omitempty"`
 	Description string `json:"description,omitempty"`
 	Product     int    `json:"product,omitempty"`
