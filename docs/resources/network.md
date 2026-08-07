@@ -3,12 +3,22 @@
 page_title: "ametnes_network Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
+  Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s). The config map supports a `public` key to control whether a public or private load balancer is provisioned.
+
+~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 ---
 
 # ametnes_network (Resource)
 
 Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
+
+The `config` map accepts a `public` key:
+
+- `"public" = "true"` — Provisions a public-facing load balancer (default behavior).
+- `"public" = "false"` — Provisions a private load balancer accessible only within the network.
+
+When running outside a cloud environment, the `public` parameter is not used by the underlying infrastructure but should still be set. For services where a network is automatically created, toggling between `public` and `private` triggers the creation of a new load balancer resource
+which may be undesired.
 
 ## Example Usage
 
@@ -22,8 +32,7 @@ terraform {
 }
 
 provider "ametnes" {
-   host = "https://cloud.ametnes.com/api/c/v1"
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
@@ -36,12 +45,14 @@ data "ametnes_location" "location" {
   code = "DSL-USE1"
 }
 
-
 resource "ametnes_network" "network" {
-  name = "NETWORK-EUW8"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-  description = "My loadbalance resource"
+  name        = "NETWORK-EUW8"
+  project     = data.ametnes_project.project.id
+  location    = data.ametnes_location.location.id
+  description = "My load balancer resource"
+  config = {
+    "public" = "true"
+  }
 }
 ```
 
@@ -50,15 +61,15 @@ resource "ametnes_network" "network" {
 
 ### Required
 
-- `location` (String) The location id of your ametnes data service location to creat this network access resource in.
+- `location` (String) The location id of your ametnes data service location to create this network access resource in.
 - `name` (String) The unique name of your network access resource.
-- `project` (String) The `project` id of the project to create your network access resource.
+- `project` (String) The `project` id of the project to create your network access resource in.
 
 ### Optional
 
+- `config` (Map of String) Configuration details for your network access resource. Commonly used keys include `public` (`"true"` for public-facing, `"false"` for private).
 - `description` (String) The description of your network access resource.
 - `kind` (String) The `kind` of your network access resource.
-- `network` (Number)
 
 ### Read-Only
 
@@ -66,5 +77,3 @@ resource "ametnes_network" "network" {
 - `id` (String) The ID of this resource.
 - `resource_id` (String)
 - `status` (String)
-
-

@@ -22,7 +22,6 @@ terraform {
 }
 
 provider "ametnes" {
-  host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
   username = var.username
 }

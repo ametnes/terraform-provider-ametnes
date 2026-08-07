@@ -26,18 +26,8 @@ data "ametnes_location" "location" {
   code = var.location_code
 }
 
-resource "ametnes_network" "network" {
-  name     = var.network_name
-  project  = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-}
-
-data "ametnes_network" "network" {
-  name       = var.network_name
-  project    = data.ametnes_project.project.id
-  location   = data.ametnes_location.location.id
-  depends_on = [ametnes_network.network]
-}
+# The network attribute on the service is optional.
+# If omitted, a network resource is automatically created.
 
 resource "random_string" "service_alias" {
   for_each = { for idx, svc in var.services : tostring(idx) => svc }
@@ -53,7 +43,6 @@ resource "ametnes_service" "service" {
   location    = data.ametnes_location.location.id
   kind        = each.value.kind
   alias       = random_string.service_alias[each.key].result
-  network     = data.ametnes_network.network.id
   capacity {
     storage = each.value.storage
   }

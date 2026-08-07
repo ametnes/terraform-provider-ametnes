@@ -16,6 +16,8 @@ The Ametnes cloud provider provides management resources for
 To use this provider, you need to generate an authentication token (aka API key) in your Ametnes Cloud account. `User` -> `Edit` your user -> `Get User Token`.
 Ensure the generated user token is kept in a secure place as it will not be visible again.
 
+The `username` is your email address associated with your Ametnes Cloud account. The `token` is generated in the Ametnes console under your user account. Both are required.
+
 ### Creating locations using the Ametnes Cloud provider.
 
 ```terraform
@@ -29,13 +31,12 @@ terraform {
 
 # Init and create the provider
 provider "ametnes" {
-  host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
   username = var.username
 
 }
 
-# Create a lcoation.
+# Create a location.
 resource "ametnes_location" "location" {
   name = "Ametnes Cloud"
   code = "EUW1"
@@ -50,44 +51,54 @@ Using the location id from above, setup your data service location. See instruct
 ### Creating resources using the Ametnes Cloud provider.
 
 ```terraform
-# Create a lcoation.
+# Look up an existing location.
 data "ametnes_location" "location" {
   name = "Ametnes Cloud"
   code = "EUW1"
 }
 
-# Create project that will host all your resources.
-resource "ametnes_project" "project" {
+# Look up an existing project.
+data "ametnes_project" "project" {
   name = "Demo"
 }
 
-# Create a network access resource.
-resource "ametnes_network" "network" {
-  name = "NETWORK-EUW5"
-  project = ametnes_project.project.id
-  location = data.ametnes_location.location.id
-  description = "My loadbalance resource"
+# Provision multiple services from a list with random aliases.
+# The network attribute is optional — if omitted, a network is auto-created.
+locals {
+  services = [
+    { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
+    { kind = "matomo:5.9",  kind_name = "matomo", storage = 10, architecture = "Starter" },
+  ]
 }
 
-# Create a service resource.
-resource "ametnes_service" "mysql" {
-  name = "MySql-Demo-Instance"
-  project = ametnes_project.project.id
+resource "random_string" "service_alias" {
+  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  length   = 5
+  special  = false
+  upper    = false
+}
+
+resource "ametnes_service" "service" {
+  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
-  kind = "mysql:8.0"
-  description = "Mysql Demo Instance"
-  network = ametnes_network.network.resource_id
+  kind     = each.value.kind
+  alias    = random_string.service_alias[each.key].result
   capacity {
-    storage = 10
-    memory = 1
-    cpu = 1
-  } 
+    storage = each.value.storage
+    memory  = 1
+    cpu     = 1
+  }
+  config = {
+    architecture  = each.value.architecture
+    "admin.email" = var.username
+  }
   nodes = 1
 }
 
-
-output "mysql_connections" {
-  value = ametnes_service.mysql.connections
+output "service_connections" {
+  value = { for k, svc in ametnes_service.service : k => svc.connections }
 }
 ```
 

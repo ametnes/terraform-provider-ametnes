@@ -14,10 +14,6 @@ variable "location_code" {
   type = string
 }
 
-variable "network_name" {
-  type = string
-}
-
 variable "project_name" {
   type = string
 }

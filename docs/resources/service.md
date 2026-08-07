@@ -3,12 +3,14 @@
 page_title: "ametnes_service Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a data service resource. All data service resources created must be attached to a network resource.
+  Creates and manages a data service resource. The network attribute is optional; if omitted, a network is automatically created.
 ---
 
 # ametnes_service (Resource)
 
-Creates and manages a data service resource. All data service resources created must be attached to a network resource.
+Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created.
+
+~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
 ## Example Usage
 
@@ -18,12 +20,15 @@ terraform {
     ametnes = {
       source  = "ametnes.com/cloud/ametnes"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 }
 
 provider "ametnes" {
-  host = "https://cloud.ametnes.com/api/c/v1"
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
@@ -36,35 +41,43 @@ data "ametnes_location" "location" {
   code = "DSL-USE1"
 }
 
-data "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
+# Provision multiple services from a list with random aliases.
+# The network attribute is omitted — a network will be auto-created.
+locals {
+  services = [
+    { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
+    { kind = "matomo:5.9",  kind_name = "matomo", storage = 10, architecture = "Starter" },
+  ]
 }
 
-resource "ametnes_service" "grafana" {
-  name = "grafana43333"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-  kind = "grafana:9.3"
-  description = "sample grafana"
-  network = data.ametnes_network.network.id
-  capacity {
-    storage = 1
-    memory = 1
-    cpu = 1
-  }
+resource "random_string" "service_alias" {
+  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  length   = 5
+  special  = false
+  upper    = false
+}
 
-  config = {
-    "auth.azuread.client_id" = "SomeText"
-    "auth.azuread.client_secret" = "SomeText"
+resource "ametnes_service" "service" {
+  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project  = data.ametnes_project.project.id
+  location = data.ametnes_location.location.id
+  kind     = each.value.kind
+  alias    = random_string.service_alias[each.key].result
+  capacity {
+    storage = each.value.storage
+    memory  = 1
+    cpu     = 1
   }
- 
+  config = {
+    architecture  = each.value.architecture
+    "admin.email" = var.username
+  }
   nodes = 1
 }
 
-output "gfn_connections" {
-  value = ametnes_service.grafana.connections
+output "service_connections" {
+  value = { for k, svc in ametnes_service.service : k => svc.connections }
 }
 ```
 
@@ -73,18 +86,19 @@ output "gfn_connections" {
 
 ### Required
 
-- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`
-- `location` (String) The location id of your ametnes data service location to creat this data service resource in.
-- `name` (String) The unique name of your network access resource.
-- `nodes` (Number) Number of nodes for your data service resource.
-- `project` (String) The `project` id of the project to create your network access resource.
+- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`, `sentry:26.2`, `matomo:5.9`
+- `location` (String) The location id of your ametnes data service location to create this data service resource in.
+- `name` (String) The unique name of your data service resource.
+- `project` (String) The `project` id of the project to create your data service resource in.
 
 ### Optional
 
+- `alias` (String) An optional alias for your data service resource.
 - `capacity` (Block List, Max: 1) Capacity specs for your data service resource. (see [below for nested schema](#nestedblock--capacity))
-- `config` (Map of String) Configuration details for your data service resource.
-- `description` (String) The description of your network access resource.
-- `network` (String) Network resource your data service resource will be attached to in order to expose it.
+- `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, and service-specific configuration.
+- `description` (String) The description of your data service resource.
+- `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, a network is automatically created.
+- `nodes` (Number) Number of nodes for your data service resource. Defaults to `1` if not specified.
 
 ### Read-Only
 
@@ -112,5 +126,3 @@ Read-Only:
 - `host` (String)
 - `name` (String)
 - `port` (String)
-
-
