@@ -30,14 +30,14 @@ data "ametnes_location" "location" {
 # If omitted, a network resource is automatically created.
 
 resource "random_string" "service_alias" {
-  for_each = { for idx, svc in var.services : tostring(idx) => svc }
+  for_each = var.services
   length   = 5
   special  = false
   upper    = false
 }
 
 resource "ametnes_service" "service" {
-  for_each    = { for idx, svc in var.services : tostring(idx) => svc }
+  for_each    = var.services
   name        = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
   project     = data.ametnes_project.project.id
   location    = data.ametnes_location.location.id
@@ -49,6 +49,7 @@ resource "ametnes_service" "service" {
   config = {
     architecture = each.value.architecture
     "admin.email" = var.username
+    "public.visible" = "true"
   }
   nodes = 1
 }

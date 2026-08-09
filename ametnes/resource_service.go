@@ -169,6 +169,13 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if v, ok := d.GetOk("config"); ok {
 		config = v.(map[string]interface{})
 	}
+	if config == nil {
+		config = make(map[string]interface{})
+	}
+	if _, ok := config["public.visible"]; !ok {
+		config["public.visible"] = "true"
+	}
+	d.Set("config", config)
 
 	// get nodes, defaults to 1 if not provided (via schema Default)
 	nodes := d.Get("nodes").(int)
@@ -298,6 +305,12 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		if v, ok := d.GetOk("config"); ok {
 			config = v.(map[string]interface{})
 		}
+		if config == nil {
+			config = make(map[string]interface{})
+		}
+		if _, ok := config["public.visible"]; !ok {
+			config["public.visible"] = "true"
+		}
 
 		// Update the resource with new values
 		updateResource := Resource{
@@ -327,6 +340,19 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		_, err = client.UpdateResource(updateResource)
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("failed to update resource: %w", err))
+		}
+
+		respChan := client.checkStatus(projectID, resourceID)
+		select {
+		case res := <-respChan:
+			if !res.Success {
+				if res.Error != nil {
+					return diag.FromErr(res.Error)
+				}
+				return diag.Errorf("Unknown error while checking for state after update")
+			}
+		case <-time.After(45 * time.Minute):
+			return diag.Errorf("Timeout occured while checking for state after update")
 		}
 	}
 

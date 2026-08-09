@@ -19,7 +19,7 @@ variable "project_name" {
 }
 
 variable "services" {
-  type = list(object({
+  type = map(object({
     kind         = string
     kind_name    = string
     storage      = number

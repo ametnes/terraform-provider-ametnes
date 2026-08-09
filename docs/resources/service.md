@@ -41,24 +41,24 @@ data "ametnes_location" "location" {
   code = "DSL-USE1"
 }
 
-# Provision multiple services from a list with random aliases.
+# Provision multiple services using a map for stable resource addressing.
 # The network attribute is omitted — a network will be auto-created.
 locals {
-  services = [
-    { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
-    { kind = "matomo:5.9",  kind_name = "matomo", storage = 10, architecture = "Starter" },
-  ]
+  services = {
+    sentry = { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
+    matomo = { kind = "matomo:5.9",  kind_name = "matomo", storage = 10, architecture = "Starter" },
+  }
 }
 
 resource "random_string" "service_alias" {
-  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  for_each = local.services
   length   = 5
   special  = false
   upper    = false
 }
 
 resource "ametnes_service" "service" {
-  for_each = { for idx, svc in local.services : tostring(idx) => svc }
+  for_each = local.services
   name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
   project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id

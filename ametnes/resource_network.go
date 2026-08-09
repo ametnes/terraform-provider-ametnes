@@ -206,6 +206,19 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("failed to update resource: %w", err))
 		}
+
+		respChan := client.checkStatus(projectID, resourceID)
+		select {
+		case res := <-respChan:
+			if !res.Success {
+				if res.Error != nil {
+					return diag.FromErr(res.Error)
+				}
+				return diag.Errorf("Unknown error while checking for state after update")
+			}
+		case <-time.After(15 * time.Minute):
+			return diag.Errorf("Timeout occured while checking for state after update")
+		}
 	}
 
 	// Read the updated resource state
