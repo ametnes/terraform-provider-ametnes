@@ -84,6 +84,21 @@ func TestCheckStatus_ReturnsSuccessOnReadyState(t *testing.T) {
 	}
 }
 
+func TestCheckStatus_ReturnsSuccessOnInitializedState(t *testing.T) {
+	client, server := getMockClientForStatus("INITIALIZED")
+	defer server.Close()
+
+	respChan := client.checkStatus(1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "expected Success to be true on INITIALIZED status")
+		assert.NoError(t, res.Error, "expected no error on INITIALIZED status")
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatus to return")
+	}
+}
+
 func TestCheckStatus_ContinuesPollingOnInitState(t *testing.T) {
 	client, server := getMockClientForStatus("INIT")
 	defer server.Close()

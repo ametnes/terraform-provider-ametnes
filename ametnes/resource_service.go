@@ -243,7 +243,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if res.Error != nil {
 			return diag.FromErr(res.Error)
 		}
-	case <-time.After(45 * time.Minute):
+	case <-time.After(60 * time.Minute):
 		return diag.Errorf("Timeout occured while checking for state")
 	}
 

@@ -107,13 +107,13 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 				close(respChan)
 				return
 			}
-			if resource.Status == "READY" {
-				respChan <- Status{
-					Success: true,
-				}
-				close(respChan)
-				return
+		if resource.Status == "READY" || resource.Status == "INITIALIZED" {
+			respChan <- Status{
+				Success: true,
 			}
+			close(respChan)
+			return
+		}
 			time.Sleep(30 * time.Second)
 		}
 

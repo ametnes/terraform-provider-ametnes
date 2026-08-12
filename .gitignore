@@ -67,3 +67,5 @@ terraform
 terraform-provider-ametnes
 
 *secrets*
+
+*.tfvars

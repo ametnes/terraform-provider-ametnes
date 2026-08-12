@@ -6,11 +6,7 @@ variable "username" {
   type = string
 }
 
-variable "location_name" {
-  type = string
-}
-
-variable "location_code" {
+variable "location_id" {
   type = string
 }
 
