@@ -47,6 +47,11 @@ resource "ametnes_service" "service" {
     "public.visible" = "true"
   }
   nodes = 1
+  timeouts {
+    create = "3h"
+    update = "3h"
+    delete = "20m"
+  }
 }
 
 output "service_connections" {

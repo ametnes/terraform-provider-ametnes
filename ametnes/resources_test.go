@@ -3,6 +3,7 @@ package ametnes
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
@@ -94,4 +95,30 @@ func TestResourceService_NetworkFieldImmutability(t *testing.T) {
 
 	require.True(t, diags.HasError(), "Expected error when changing 'network' field")
 	require.Contains(t, diags[0].Summary, "Changing the 'network' field is not permitted")
+}
+
+func TestResourceService_Timeouts(t *testing.T) {
+	resource := resourceService()
+
+	require.NotNil(t, resource.Timeouts)
+	require.NotNil(t, resource.Timeouts.Create)
+	require.NotNil(t, resource.Timeouts.Update)
+	require.NotNil(t, resource.Timeouts.Delete)
+
+	assert.Equal(t, 60*time.Minute, *resource.Timeouts.Create)
+	assert.Equal(t, 45*time.Minute, *resource.Timeouts.Update)
+	assert.Equal(t, 10*time.Minute, *resource.Timeouts.Delete)
+}
+
+func TestResourceNetwork_Timeouts(t *testing.T) {
+	resource := resourceNetwork()
+
+	require.NotNil(t, resource.Timeouts)
+	require.NotNil(t, resource.Timeouts.Create)
+	require.NotNil(t, resource.Timeouts.Update)
+	require.NotNil(t, resource.Timeouts.Delete)
+
+	assert.Equal(t, 15*time.Minute, *resource.Timeouts.Create)
+	assert.Equal(t, 15*time.Minute, *resource.Timeouts.Update)
+	assert.Equal(t, 10*time.Minute, *resource.Timeouts.Delete)
 }

@@ -45,6 +45,12 @@ resource "ametnes_service" "grafana" {
   }
  
   nodes = 1
+
+  timeouts {
+    create = "60m"
+    update = "2h"
+    delete = "20m"
+  }
 }
 
 output "gfn_connections" {

@@ -74,6 +74,15 @@ resource "ametnes_service" "service" {
     "admin.email" = var.username
   }
   nodes = 1
+
+  # Optional. Override the time the provider waits for the resource to
+  # reach a stable state during create/update/delete. Useful for
+  # long-running deployments. Defaults: create 60m, update 45m, delete 10m.
+  timeouts {
+    create = "60m"
+    update = "2h"
+    delete = "20m"
+  }
 }
 
 output "service_connections" {
@@ -107,6 +116,47 @@ output "service_connections" {
 - `id` (String) The ID of this resource.
 - `resource_id` (String)
 - `status` (String)
+
+## Timeouts
+
+The `timeouts` block controls how long the provider waits for the service to reach a stable state. The actual deployment is performed asynchronously by the Ametnes Cloud Agent, so the Terraform run must wait for the agent to finish before it completes.
+
+- `create` - (Default `60m`) Time to wait for the service to be created and become ready.
+- `update` - (Default `45m`) Time to wait for the service to be updated.
+- `delete` - (Default `10m`) Time to wait for the service to be deleted.
+
+```terraform
+timeouts {
+  create = "60m"
+  update = "2h"
+  delete = "20m"
+}
+```
+
+### Agent deployment pacing
+
+The Cloud Agent deploys resources as a series of *phases*. The agent can be configured to control the rate at which resources and their components are deployed to the cluster, so a slow storage backend is never overwhelmed by many volumes and controllers being created at once.
+
+### On-premises environments with slow storage (e.g. NAS)
+
+In on-premises environments backed by slow disk such as a NAS, provisioning many volumes simultaneously can overwhelm the storage provisioner and cause timeouts or partial failures. To accommodate this:
+
+1. **Slow down the agent** by reducing `max_concurrent_heavy` and/or raising `timeout_factor` so the agent paces volume creation and controller rollout.
+2. **Add buffer to the Terraform timeout** by increasing `create` and `update` so the Terraform run allows the agent the extra time it needs to deploy everything. For example:
+
+```terraform
+resource "ametnes_service" "service" {
+  # ...
+
+  timeouts {
+    create = "2h"
+    update = "2h"
+    delete = "20m"
+  }
+}
+```
+
+> Note: the timeout is not a deployment deadline — it only bounds how long Terraform waits. Deployments that the agent completes more quickly will still finish as soon as the resource becomes ready.
 
 <a id="nestedblock--capacity"></a>
 ### Nested Schema for `capacity`

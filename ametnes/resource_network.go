@@ -26,6 +26,12 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 		UpdateContext: resourceNetworkUpdate,
 		DeleteContext: resourceServiceOrNetworkDelete,
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(15 * time.Minute),
+			Update: schema.DefaultTimeout(15 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"project": {
@@ -139,8 +145,8 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if res.Error != nil {
 			return diag.FromErr(res.Error)
 		}
-	case <-time.After(15 * time.Minute):
-		return diag.Errorf("Timeout occured while checking for state")
+	case <-time.After(d.Timeout(schema.TimeoutCreate)):
+		return diag.Errorf("Timeout occurred while checking for state")
 	}
 
 	return diag.Errorf("Unknown error while checking for state")
@@ -216,8 +222,8 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 				}
 				return diag.Errorf("Unknown error while checking for state after update")
 			}
-		case <-time.After(15 * time.Minute):
-			return diag.Errorf("Timeout occured while checking for state after update")
+		case <-time.After(d.Timeout(schema.TimeoutUpdate)):
+			return diag.Errorf("Timeout occurred while checking for state after update")
 		}
 	}
 

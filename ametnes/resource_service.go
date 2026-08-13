@@ -23,6 +23,12 @@ Creates and manages a data service resource. All data service resources created 
 		DeleteContext: resourceServiceOrNetworkDelete,
 		UpdateContext: resourceServiceUpdate,
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(60 * time.Minute),
+			Update: schema.DefaultTimeout(45 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 
 			"project": {
@@ -243,8 +249,8 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		if res.Error != nil {
 			return diag.FromErr(res.Error)
 		}
-	case <-time.After(60 * time.Minute):
-		return diag.Errorf("Timeout occured while checking for state")
+	case <-time.After(d.Timeout(schema.TimeoutCreate)):
+		return diag.Errorf("Timeout occurred while checking for state")
 	}
 
 	return diag.Errorf("Unknown error while checking for state")
@@ -351,8 +357,8 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 				}
 				return diag.Errorf("Unknown error while checking for state after update")
 			}
-		case <-time.After(45 * time.Minute):
-			return diag.Errorf("Timeout occured while checking for state after update")
+		case <-time.After(d.Timeout(schema.TimeoutUpdate)):
+			return diag.Errorf("Timeout occurred while checking for state after update")
 		}
 	}
 
@@ -481,8 +487,8 @@ func resourceServiceOrNetworkDelete(ctx context.Context, d *schema.ResourceData,
 			d.SetId("")
 			return nil
 		}
-	case <-time.After(10 * time.Minute):
-		return diag.Errorf("Timeout occured while checking for state")
+	case <-time.After(d.Timeout(schema.TimeoutDelete)):
+		return diag.Errorf("Timeout occurred while checking for state")
 	}
 	// we will not get here
 	return nil
