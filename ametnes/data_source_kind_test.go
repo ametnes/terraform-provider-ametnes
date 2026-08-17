@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -38,6 +39,9 @@ import (
 */
 
 func TestKindData(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("Set TF_ACC to run acceptance tests against the live API")
+	}
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	resource := dataSourceKinds()
 	resourceData := schema.TestResourceDataRaw(t, resource.Schema, nil)
@@ -46,7 +50,7 @@ func TestKindData(t *testing.T) {
 		// Check if it's an authentication or API error
 		for _, d := range diag {
 			errorMsg := d.Summary + " " + d.Detail
-			if strings.Contains(errorMsg, "401") || 
+			if strings.Contains(errorMsg, "401") ||
 				strings.Contains(errorMsg, "Unauthorized") ||
 				strings.Contains(errorMsg, "API request failed") {
 				t.Skipf("Skipping test due to authentication/API error: %s - %s", d.Summary, d.Detail)
