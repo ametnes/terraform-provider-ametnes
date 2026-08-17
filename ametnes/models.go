@@ -74,8 +74,6 @@ type Product struct {
 }
 
 type Capacity struct {
-	Cpu     int
-	Memory  int
 	Storage int
 }
 

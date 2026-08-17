@@ -83,8 +83,6 @@ func TestClient_CreateResource_Unit(t *testing.T) {
 		Name:     "New Resource",
 		Spec: Spec{
 			Components: map[string]interface{}{
-				"cpu":     1,
-				"memory":  1,
 				"storage": 1,
 			},
 			Nodes: 1,

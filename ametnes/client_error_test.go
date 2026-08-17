@@ -249,7 +249,6 @@ func TestResourceServiceCreate_FailsOnErrorState(t *testing.T) {
 		"location":    "gcp/europe-west2",
 		"network":     "1",
 		"description": "test",
-		"nodes":       1,
 		"config":      map[string]interface{}{},
 		"capacity":    []interface{}{},
 	})
@@ -328,8 +327,6 @@ func getMockClientForUpdate() (*Client, *httptest.Server) {
 				Network:     1,
 				Spec: Spec{
 					Components: map[string]interface{}{
-						"cpu":     1,
-						"memory":  1,
 						"storage": 1,
 					},
 					Nodes:   1,
@@ -378,7 +375,6 @@ func TestResourceServiceUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
 		"kind":        "mysql:8.0",
 		"location":    "gcp/europe-west2",
 		"description": "test",
-		"nodes":       1,
 		"config":      map[string]interface{}{"key": "old-value"},
 		"capacity":    []interface{}{},
 		"alias":       "test-alias",
@@ -446,8 +442,6 @@ func TestResourceServiceCreate_DefaultsPublicVisibleToTrue(t *testing.T) {
 				Network:     1,
 				Spec: Spec{
 					Components: map[string]interface{}{
-						"cpu":     1,
-						"memory":  1,
 						"storage": 1,
 					},
 					Nodes:   1,
@@ -485,7 +479,6 @@ func TestResourceServiceCreate_DefaultsPublicVisibleToTrue(t *testing.T) {
 		"location":    "gcp/europe-west2",
 		"network":     "1",
 		"description": "test",
-		"nodes":       1,
 		"capacity":    []interface{}{},
 	})
 
@@ -527,8 +520,6 @@ func TestResourceServiceCreate_PreservesExplicitPublicVisible(t *testing.T) {
 				Network:     1,
 				Spec: Spec{
 					Components: map[string]interface{}{
-						"cpu":     1,
-						"memory":  1,
 						"storage": 1,
 					},
 					Nodes:   1,
@@ -566,7 +557,6 @@ func TestResourceServiceCreate_PreservesExplicitPublicVisible(t *testing.T) {
 		"location":    "gcp/europe-west2",
 		"network":     "1",
 		"description": "test",
-		"nodes":       1,
 		"config":      map[string]interface{}{"public.visible": "false"},
 		"capacity":    []interface{}{},
 	})
@@ -610,8 +600,6 @@ func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) 
 				Network:     1,
 				Spec: Spec{
 					Components: map[string]interface{}{
-						"cpu":     1,
-						"memory":  1,
 						"storage": 1,
 					},
 					Nodes:   1,
@@ -649,7 +637,6 @@ func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) 
 		"location":    "gcp/europe-west2",
 		"network":     "1",
 		"description": "test",
-		"nodes":       1,
 		"capacity":    []interface{}{},
 	})
 

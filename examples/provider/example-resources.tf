@@ -39,7 +39,6 @@ resource "ametnes_service" "service" {
     architecture  = each.value.architecture
     "admin.email" = var.username
   }
-  nodes = 1
 }
 
 output "service_connections" {

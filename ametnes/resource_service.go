@@ -64,33 +64,16 @@ Creates and manages a data service resource. All data service resources created 
 				Required:    false,
 				Optional:    true,
 				MaxItems:    1,
-				Description: "Capacity specs for your data service resource.",
+				Description: "Capacity specs for your data service resource. Only `storage` is configurable.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cpu": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Cpu, in unit counts, that your service resource needs.",
-						},
-
-						"memory": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Memory, in (Gi) unit counts, that your service resource needs.",
-						},
 						"storage": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "Storage, in (Gb) unit counts, that your service resource needs.",
+							Description: "Storage, in (Gb) unit counts, for your data service resource. Optional — if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.",
 						},
 					},
 				},
-			},
-			"nodes": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     1,
-				Description: "Number of nodes for your data service resource. Defaults to `1` if not specified.",
 			},
 			"config": {
 				Type:        schema.TypeMap,
@@ -183,9 +166,6 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 	d.Set("config", config)
 
-	// get nodes, defaults to 1 if not provided (via schema Default)
-	nodes := d.Get("nodes").(int)
-
 	alias := ""
 	if a, ok := d.GetOk("alias"); ok {
 		alias = a.(string)
@@ -203,11 +183,9 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Alias:       alias,
 		Spec: Spec{
 			Components: map[string]interface{}{
-				"cpu":     capacity.Cpu,
 				"storage": capacity.Storage,
-				"memory":  capacity.Memory,
 			},
-			Nodes:  nodes,
+			Nodes:  DefaultNodes,
 			Config: config,
 		},
 	}
@@ -263,8 +241,8 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	// Check if any updatable fields have changed
-	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("capacity") || 
-		d.HasChange("nodes") || d.HasChange("config") || d.HasChange("alias")
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("capacity") ||
+		d.HasChange("config") || d.HasChange("alias")
 
 	if hasChanges {
 		client := m.(*Client)
@@ -303,9 +281,6 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			return diag.FromErr(err)
 		}
 
-		// Get nodes, defaults to 1 if not provided
-		nodes := d.Get("nodes").(int)
-
 		// Get the config
 		var config map[string]interface{}
 		if v, ok := d.GetOk("config"); ok {
@@ -333,11 +308,9 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			Product:     existingResource.Product,
 			Spec: Spec{
 				Components: map[string]interface{}{
-					"cpu":     capacity.Cpu,
 					"storage": capacity.Storage,
-					"memory":  capacity.Memory,
 				},
-				Nodes:    nodes,
+				Nodes:    DefaultNodes,
 				Config:   config,
 				Networks: existingResource.Spec.Networks,
 			},
@@ -402,14 +375,10 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 
 	// Set service-specific fields only for service resources
 	if strings.HasPrefix(resource.Kind, "service/") {
-		d.Set("nodes", resource.Spec.Nodes)
-
 		// Set capacity
 		if resource.Spec.Components != nil {
 			capacity := []map[string]interface{}{
 				{
-					"cpu":     resource.Spec.Components["cpu"],
-					"memory":  resource.Spec.Components["memory"],
 					"storage": resource.Spec.Components["storage"],
 				},
 			}
@@ -497,25 +466,9 @@ func resourceServiceOrNetworkDelete(ctx context.Context, d *schema.ResourceData,
 func expandCapacitySchema(in []interface{}) (*Capacity, error) {
 	cap := &Capacity{}
 	if len(in) == 0 || in[0] == nil {
-		return &Capacity{
-			Cpu:     1,
-			Memory:  1,
-			Storage: 1,
-		}, nil
+		return &Capacity{Storage: 1}, nil
 	}
 	m := in[0].(map[string]interface{})
-
-	if cpu, ok := m["cpu"]; ok {
-		cap.Cpu = cpu.(int)
-	} else {
-		cap.Cpu = 1
-	}
-
-	if mem, ok := m["memory"]; ok {
-		cap.Memory = mem.(int)
-	} else {
-		cap.Memory = 1
-	}
 
 	if storage, ok := m["storage"]; ok {
 		cap.Storage = storage.(int)

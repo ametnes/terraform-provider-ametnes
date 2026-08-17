@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const DefaultCpu = 1
 const DefaultStorage = 1
-const DefaultMemory = 1
 const DefaultNodes = 1
 
 func resourceNetwork() *schema.Resource {
@@ -120,9 +118,7 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 		Description: description,
 		Spec: Spec{
 			Components: map[string]interface{}{
-				"cpu":     DefaultCpu,
 				"storage": DefaultStorage,
-				"memory":  DefaultMemory,
 			},
 			Nodes:  DefaultNodes,
 			Config: config,
