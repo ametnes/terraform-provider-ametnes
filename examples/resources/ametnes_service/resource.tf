@@ -35,8 +35,6 @@ resource "ametnes_service" "grafana" {
   network = data.ametnes_network.network.id
   capacity {
     storage = 1
-    memory = 1
-    cpu = 1
   }
 
   config = {

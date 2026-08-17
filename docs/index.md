@@ -87,8 +87,6 @@ resource "ametnes_service" "service" {
   alias    = random_string.service_alias[each.key].result
   capacity {
     storage = each.value.storage
-    memory  = 1
-    cpu     = 1
   }
   config = {
     architecture  = each.value.architecture
