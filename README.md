@@ -28,13 +28,13 @@ make install
 ## Authentication
 
 To use this provider, generate an authentication token (aka API key) in your Ametnes Cloud
-account: `User` -> `Edit` your user -> `Get User Token`. Keep the token secure — it will not
+account: `User` -> `Edit` your user -> `Get User Token`. Keep the token secure - it will not
 be visible again.
 
 Two variables are required:
 
-- `username` — the email address associated with your Ametnes Cloud account.
-- `token` — the API token generated in the Ametnes console under your user account.
+- `username` - the email address associated with your Ametnes Cloud account.
+- `token` - the API token generated in the Ametnes console under your user account.
 
 Supply them through any Terraform variable mechanism, for example `terraform.tfvars`:
 
@@ -100,8 +100,8 @@ resource "ametnes_project" "project" {
 A network access resource exposes your data services. Depending on your Kubernetes cluster
 this may be a load balancer or a set of `NodePort`s. The `config` map accepts a `public` key:
 
-- `"public" = "true"` — provisions a public-facing load balancer (default behavior).
-- `"public" = "false"` — provisions a private load balancer accessible only within the network.
+- `"public" = "true"` - provisions a public-facing load balancer (default behavior).
+- `"public" = "false"` - provisions a private load balancer accessible only within the network.
 
 ```terraform
 resource "ametnes_network" "network" {
@@ -118,9 +118,9 @@ resource "ametnes_network" "network" {
 ### Create data services
 
 Provision multiple services using a map for stable resource addressing. The `network`
-attribute is optional — if omitted, a network is automatically created. Compute sizing
+attribute is optional - if omitted, a network is automatically created. Compute sizing
 (CPU/memory) is driven by the `architecture` preset in `config`. `storage` is optional too
-— if omitted, the backend assigns a default value — and the value you set is distributed
+- if omitted, the backend assigns a default value - and the value you set is distributed
 across all the components that make up the service in predetermined proportions.
 
 ```terraform

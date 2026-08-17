@@ -10,7 +10,7 @@ data "ametnes_project" "project" {
 }
 
 # Provision multiple services using a map for stable resource addressing.
-# The network attribute is optional — if omitted, a network is auto-created.
+# The network attribute is optional - if omitted, a network is auto-created.
 locals {
   services = {
     sentry = { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },

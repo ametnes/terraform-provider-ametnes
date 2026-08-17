@@ -14,8 +14,8 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 
 The `config` map accepts a `public` key:
 
-- `"public" = "true"` — Provisions a public-facing load balancer (default behavior).
-- `"public" = "false"` — Provisions a private load balancer accessible only within the network.
+- `"public" = "true"` - Provisions a public-facing load balancer (default behavior).
+- `"public" = "false"` - Provisions a private load balancer accessible only within the network.
 
 When running outside a cloud environment, the `public` parameter is not used by the underlying infrastructure but should still be set. For services where a network is automatically created, toggling between `public` and `private` triggers the creation of a new load balancer resource
 which may be undesired.

@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - In-place updates for `ametnes_service` (`name`, `description`, `capacity`,
   `config`, `alias`) and `ametnes_network` (`name`, `description`,
-  `config`) — these no longer force recreation.
+  `config`) - these no longer force recreation.
 - `alias` attribute on `ametnes_service`.
 - Configurable `timeouts` blocks on `ametnes_service` (create `60m`, update
   `45m`, delete `10m`) and `ametnes_network` (create `15m`, update `15m`,
@@ -36,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples and docs switched to `for_each` maps with `random_string` aliases
   and `architecture` presets; removed `cpu` and `memory` from capacity blocks
   (sizing is now driven entirely by the architecture preset).
-- `storage` in the `capacity` block is optional — if omitted, the backend
-  assigns a default value — and the configured value is distributed across
+- `storage` in the `capacity` block is optional - if omitted, the backend
+  assigns a default value - and the configured value is distributed across
   the service's components in predetermined proportions.
 
 ### Removed

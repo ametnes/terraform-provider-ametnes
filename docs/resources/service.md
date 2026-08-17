@@ -10,7 +10,7 @@ description: |-
 
 Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created. Compute sizing (CPU/memory) is driven by the `architecture` preset in `config`.
 
-The `capacity` block only exposes `storage`. It is optional — if omitted, the backend assigns a default value — and the value you set is distributed across all the components that make up the service in predetermined proportions.
+The `capacity` block only exposes `storage`. It is optional - if omitted, the backend assigns a default value - and the value you set is distributed across all the components that make up the service in predetermined proportions.
 
 ~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
@@ -44,7 +44,7 @@ data "ametnes_location" "location" {
 }
 
 # Provision multiple services using a map for stable resource addressing.
-# The network attribute is omitted — a network will be auto-created.
+# The network attribute is omitted - a network will be auto-created.
 locals {
   services = {
     sentry = { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
@@ -154,14 +154,14 @@ resource "ametnes_service" "service" {
 }
 ```
 
-> Note: the timeout is not a deployment deadline — it only bounds how long Terraform waits. Deployments that the agent completes more quickly will still finish as soon as the resource becomes ready.
+> Note: the timeout is not a deployment deadline - it only bounds how long Terraform waits. Deployments that the agent completes more quickly will still finish as soon as the resource becomes ready.
 
 <a id="nestedblock--capacity"></a>
 ### Nested Schema for `capacity`
 
 Optional:
 
-- `storage` (Number) Storage, in (Gb) unit counts, for your data service resource. Optional — if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.
+- `storage` (Number) Storage, in (Gb) unit counts, for your data service resource. Optional - if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.
 
 
 <a id="nestedatt--connections"></a>
