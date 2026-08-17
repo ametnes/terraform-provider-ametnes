@@ -70,7 +70,7 @@ Creates and manages a data service resource. All data service resources created 
 						"storage": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "Storage, in (Gb) unit counts, for your data service resource. Optional — if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.",
+							Description: "Storage, in (Gb) unit counts, for your data service resource. Optional - if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.",
 						},
 					},
 				},
