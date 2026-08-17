@@ -37,8 +37,6 @@ resource "ametnes_service" "hdb" {
   network = ametnes_network.network.resource_id
   capacity {
     storage = 100
-    memory = 4
-    cpu = 2
   }
 
   config = {
@@ -48,7 +46,6 @@ resource "ametnes_service" "hdb" {
     "clustering.password" = var.hdb_clustering_pass
   }
  
-  nodes = 1
 }
 
 output "hdb_connections" {

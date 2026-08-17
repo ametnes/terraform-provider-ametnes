@@ -42,7 +42,6 @@ resource "ametnes_service" "grafana" {
     "auth.azuread.client_secret" = "SomeText"
   }
  
-  nodes = 1
 
   timeouts {
     create = "60m"

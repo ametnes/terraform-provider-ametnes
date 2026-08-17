@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - In-place updates for `ametnes_service` (`name`, `description`, `capacity`,
-  `nodes`, `config`, `alias`) and `ametnes_network` (`name`, `description`,
+  `config`, `alias`) and `ametnes_network` (`name`, `description`,
   `config`) — these no longer force recreation.
 - `alias` attribute on `ametnes_service`.
 - Configurable `timeouts` blocks on `ametnes_service` (create `60m`, update
@@ -21,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   private load balancer provisioning.
 - `ametnes_service.network` is now optional; a network is auto-created when
   omitted.
-- `ametnes_service.nodes` now defaults to `1`.
 - `ametnes_service.config` defaults `public.visible` to `"true"` when unset.
 - Unit and mock tests for the client, status polling, resource create/update,
   and timeouts, plus a `make testunit` target.
@@ -35,11 +34,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ametnes_kinds` and `ametnes_network` data sources return clearer error
   messages and handle empty results.
 - Examples and docs switched to `for_each` maps with `random_string` aliases
-  and `architecture` presets; removed `memory = 1` / `cpu = 1` from example
-  capacity blocks.
+  and `architecture` presets; removed `cpu` and `memory` from capacity blocks
+  (sizing is now driven entirely by the architecture preset).
+- `storage` in the `capacity` block is optional — if omitted, the backend
+  assigns a default value — and the configured value is distributed across
+  the service's components in predetermined proportions.
 
 ### Removed
 - Redundant `network` (Number) field from the `ametnes_network` schema.
+- The `nodes` attribute from `ametnes_service`; the node count is now fixed
+  internally to `1` and driven by the architecture preset.
+- The `cpu` and `memory` attributes from the `ametnes_service` `capacity` block;
+  compute sizing is now driven by the architecture preset.
 
 ### Fixed
 - Documentation typos (`lcoation` → `location`, `creat` → `create`,

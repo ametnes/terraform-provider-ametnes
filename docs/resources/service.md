@@ -8,7 +8,9 @@ description: |-
 
 # ametnes_service (Resource)
 
-Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created.
+Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created. Compute sizing (CPU/memory) is driven by the `architecture` preset in `config`.
+
+The `capacity` block only exposes `storage`. It is optional — if omitted, the backend assigns a default value — and the value you set is distributed across all the components that make up the service in predetermined proportions.
 
 ~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
@@ -71,7 +73,6 @@ resource "ametnes_service" "service" {
     architecture  = each.value.architecture
     "admin.email" = var.username
   }
-  nodes = 1
 
   # Optional. Override the time the provider waits for the resource to
   # reach a stable state during create/update/delete. Useful for
@@ -101,11 +102,10 @@ output "service_connections" {
 ### Optional
 
 - `alias` (String) An optional alias for your data service resource.
-- `capacity` (Block List, Max: 1) Capacity specs for your data service resource. (see [below for nested schema](#nestedblock--capacity))
+- `capacity` (Block List, Max: 1) Capacity specs for your data service resource. Only `storage` is configurable. (see [below for nested schema](#nestedblock--capacity))
 - `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, and service-specific configuration.
 - `description` (String) The description of your data service resource.
 - `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, a network is automatically created.
-- `nodes` (Number) Number of nodes for your data service resource. Defaults to `1` if not specified.
 
 ### Read-Only
 
@@ -161,9 +161,7 @@ resource "ametnes_service" "service" {
 
 Optional:
 
-- `cpu` (Number) Cpu, in unit counts, that your service resource needs.
-- `memory` (Number) Memory, in (Gi) unit counts, that your service resource needs.
-- `storage` (Number) Storage, in (Gb) unit counts, that your service resource needs.
+- `storage` (Number) Storage, in (Gb) unit counts, for your data service resource. Optional — if omitted, the backend assigns a default value. The value is distributed across all components that make up the service in predetermined proportions.
 
 
 <a id="nestedatt--connections"></a>

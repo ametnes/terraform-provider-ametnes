@@ -46,7 +46,6 @@ resource "ametnes_service" "service" {
     "admin.email" = var.username
     "public.visible" = "true"
   }
-  nodes = 1
   timeouts {
     create = "3h"
     update = "3h"

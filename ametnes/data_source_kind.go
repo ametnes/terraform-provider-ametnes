@@ -85,7 +85,7 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
-							Description: "Capacity limits for ths resource kind. These include `memory`, `cpu` and `storage` as well as the number of `nodes` that can be scaled to.",
+							Description: "Capacity limits for this resource kind. These include `storage` as well as the number of `nodes` that can be scaled to.",
 						},
 						"type": {
 							Type:     schema.TypeString,

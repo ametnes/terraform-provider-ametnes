@@ -39,8 +39,6 @@ func TestCreateAndGetResource_Unit(t *testing.T) {
 
 	spec := Spec{}
 	components := make(map[string]interface{})
-	components["cpu"] = 1
-	components["memory"] = 1
 	components["storage"] = 1
 
 	spec.Components = components
@@ -75,7 +73,6 @@ func TestResourceService_NetworkFieldImmutability(t *testing.T) {
 		"name":     "test-service",
 		"kind":     "mysql:8.0",
 		"location": "gcp/europe-west2",
-		"nodes":    1,
 		"network":  "123",
 	})
 

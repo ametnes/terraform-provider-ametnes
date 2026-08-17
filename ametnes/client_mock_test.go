@@ -110,8 +110,6 @@ func GetMockClient(t *testing.T) (*Client, *httptest.Server) {
 						Network:     1,
 						Spec: Spec{
 							Components: map[string]interface{}{
-								"cpu":     1,
-								"memory":  1,
 								"storage": 1,
 							},
 							Nodes: 1,
@@ -138,8 +136,6 @@ func GetMockClient(t *testing.T) (*Client, *httptest.Server) {
 				Network:     1,
 				Spec: Spec{
 					Components: map[string]interface{}{
-						"cpu":     1,
-						"memory":  1,
 						"storage": 1,
 					},
 					Nodes: 1,
