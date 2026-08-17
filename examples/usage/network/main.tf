@@ -1,14 +1,13 @@
 terraform {
   required_providers {
     ametnes = {
-      # version = "0.3"
+      # version = "0.4"
       source  = "ametnes.com/cloud/ametnes"
     }
   }
 }
 
 provider "ametnes" {
-   host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
   username = var.username
 }

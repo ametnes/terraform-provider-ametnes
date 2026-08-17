@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -22,7 +23,14 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 `,
 		CreateContext: resourceNetworkCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
+		UpdateContext: resourceNetworkUpdate,
 		DeleteContext: resourceServiceOrNetworkDelete,
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(15 * time.Minute),
+			Update: schema.DefaultTimeout(15 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 
@@ -35,13 +43,11 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true, // if the name changes the we need to create a new resource
 				Description: "The unique name of your network access resource.",
 			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true,
 				Description: "The description of your network access resource.",
 			},
 			"kind": {
@@ -57,14 +63,15 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 				ForceNew: true,
 				Description: "The location id of your ametnes data service location to creat this network access resource in.",
 			},
+			"config": {
+				Type:        schema.TypeMap,
+				Required:    false,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "Configuration details for your network access resource.",
+			},
 
 			// computed
-			"network": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-				Computed: true,
-			},
 			"resource_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -97,6 +104,11 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 	kind := d.Get("kind").(string)
 
+	var config map[string]interface{}
+	if v, ok := d.GetOk("config"); ok {
+		config = v.(map[string]interface{})
+	}
+
 	// we add network as prefix for network resource as thats how
 	// server differentiates from other resources like service.
 	prefixedKind := fmt.Sprintf("network/%s", kind)
@@ -112,13 +124,11 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 				"storage": DefaultStorage,
 				"memory":  DefaultMemory,
 			},
-			Nodes: DefaultNodes,
+			Nodes:  DefaultNodes,
+			Config: config,
 		},
 	}
 
-	if net, ok := d.GetOk("network"); ok {
-		resource.Network = net.(int)
-	}
 	network, err := client.CreateResource(resource)
 
 	if err != nil {
@@ -129,14 +139,94 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	select {
 	case res := <-respChan:
 		if res.Success {
-			// Identity function
 			d.SetId(fmt.Sprintf("%d/%d", projectID, network.Id))
 			return resourceServiceOrNetworkRead(ctx, d, m)
 		}
-	case <-time.After(15 * time.Minute):
-		return diag.Errorf("Timeout occured while checking for state")
+		if res.Error != nil {
+			return diag.FromErr(res.Error)
+		}
+	case <-time.After(d.Timeout(schema.TimeoutCreate)):
+		return diag.Errorf("Timeout occurred while checking for state")
 	}
 
-	// we will not reach here
-	return nil
+	return diag.Errorf("Unknown error while checking for state")
+}
+
+func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Check if any updatable fields have changed
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("config")
+
+	if hasChanges {
+		client := m.(*Client)
+
+		projectID, err := strconv.Atoi(d.Get("project").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		ids := strings.Split(d.Id(), "/")
+		resourceID, err := strconv.Atoi(ids[1])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Get the existing resource to preserve other fields
+		existingResource, err := client.GetResource(projectID, resourceID)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to get existing resource: %w", err))
+		}
+
+		// Get updated fields
+		name := d.Get("name").(string)
+		description := ""
+		if desc, ok := d.GetOk("description"); ok {
+			description = desc.(string)
+		}
+
+		// Get the config
+		var config map[string]interface{}
+		if v, ok := d.GetOk("config"); ok {
+			config = v.(map[string]interface{})
+		}
+
+		// Update the resource with new values
+		updateResource := Resource{
+			Id:          existingResource.Id,
+			Project:     existingResource.Project,
+			Account:     existingResource.Account,
+			Kind:        existingResource.Kind,
+			Location:    existingResource.Location,
+			Network:     existingResource.Network,
+			Name:        name,
+			Status:      existingResource.Status,
+			Description: description,
+			Product:     existingResource.Product,
+			Spec: Spec{
+				Components: existingResource.Spec.Components,
+				Nodes:      existingResource.Spec.Nodes,
+				Config:     config,
+				Networks:   existingResource.Spec.Networks,
+			},
+		}
+
+		_, err = client.UpdateResource(updateResource)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to update resource: %w", err))
+		}
+
+		respChan := client.checkStatus(projectID, resourceID)
+		select {
+		case res := <-respChan:
+			if !res.Success {
+				if res.Error != nil {
+					return diag.FromErr(res.Error)
+				}
+				return diag.Errorf("Unknown error while checking for state after update")
+			}
+		case <-time.After(d.Timeout(schema.TimeoutUpdate)):
+			return diag.Errorf("Timeout occurred while checking for state after update")
+		}
+	}
+
+	// Read the updated resource state
+	return resourceServiceOrNetworkRead(ctx, d, m)
 }

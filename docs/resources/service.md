@@ -3,12 +3,14 @@
 page_title: "ametnes_service Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a data service resource. All data service resources created must be attached to a network resource.
+  Creates and manages a data service resource. The network attribute is optional; if omitted, a network is automatically created.
 ---
 
 # ametnes_service (Resource)
 
-Creates and manages a data service resource. All data service resources created must be attached to a network resource.
+Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created.
+
+~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
 ## Example Usage
 
@@ -18,12 +20,15 @@ terraform {
     ametnes = {
       source  = "ametnes.com/cloud/ametnes"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 }
 
 provider "ametnes" {
-  host = "https://cloud.ametnes.com/api/c/v1"
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
@@ -36,35 +41,50 @@ data "ametnes_location" "location" {
   code = "DSL-USE1"
 }
 
-data "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
+# Provision multiple services using a map for stable resource addressing.
+# The network attribute is omitted — a network will be auto-created.
+locals {
+  services = {
+    sentry = { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
+    matomo = { kind = "matomo:5.9",  kind_name = "matomo", storage = 10, architecture = "Starter" },
+  }
 }
 
-resource "ametnes_service" "grafana" {
-  name = "grafana43333"
-  project = data.ametnes_project.project.id
+resource "random_string" "service_alias" {
+  for_each = local.services
+  length   = 5
+  special  = false
+  upper    = false
+}
+
+resource "ametnes_service" "service" {
+  for_each = local.services
+  name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
-  kind = "grafana:9.3"
-  description = "sample grafana"
-  network = data.ametnes_network.network.id
+  kind     = each.value.kind
+  alias    = random_string.service_alias[each.key].result
   capacity {
-    storage = 1
-    memory = 1
-    cpu = 1
+    storage = each.value.storage
   }
-
   config = {
-    "auth.azuread.client_id" = "SomeText"
-    "auth.azuread.client_secret" = "SomeText"
+    architecture  = each.value.architecture
+    "admin.email" = var.username
   }
- 
   nodes = 1
+
+  # Optional. Override the time the provider waits for the resource to
+  # reach a stable state during create/update/delete. Useful for
+  # long-running deployments. Defaults: create 60m, update 45m, delete 10m.
+  timeouts {
+    create = "60m"
+    update = "2h"
+    delete = "20m"
+  }
 }
 
-output "gfn_connections" {
-  value = ametnes_service.grafana.connections
+output "service_connections" {
+  value = { for k, svc in ametnes_service.service : k => svc.connections }
 }
 ```
 
@@ -73,18 +93,19 @@ output "gfn_connections" {
 
 ### Required
 
-- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`
-- `location` (String) The location id of your ametnes data service location to creat this data service resource in.
-- `name` (String) The unique name of your network access resource.
-- `nodes` (Number) Number of nodes for your data service resource.
-- `project` (String) The `project` id of the project to create your network access resource.
+- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`, `sentry:26.2`, `matomo:5.9`
+- `location` (String) The location id of your ametnes data service location to create this data service resource in.
+- `name` (String) The unique name of your data service resource.
+- `project` (String) The `project` id of the project to create your data service resource in.
 
 ### Optional
 
+- `alias` (String) An optional alias for your data service resource.
 - `capacity` (Block List, Max: 1) Capacity specs for your data service resource. (see [below for nested schema](#nestedblock--capacity))
-- `config` (Map of String) Configuration details for your data service resource.
-- `description` (String) The description of your network access resource.
-- `network` (String) Network resource your data service resource will be attached to in order to expose it.
+- `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, and service-specific configuration.
+- `description` (String) The description of your data service resource.
+- `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, a network is automatically created.
+- `nodes` (Number) Number of nodes for your data service resource. Defaults to `1` if not specified.
 
 ### Read-Only
 
@@ -93,6 +114,47 @@ output "gfn_connections" {
 - `id` (String) The ID of this resource.
 - `resource_id` (String)
 - `status` (String)
+
+## Timeouts
+
+The `timeouts` block controls how long the provider waits for the service to reach a stable state. The actual deployment is performed asynchronously by the Ametnes Cloud Agent, so the Terraform run must wait for the agent to finish before it completes.
+
+- `create` - (Default `60m`) Time to wait for the service to be created and become ready.
+- `update` - (Default `45m`) Time to wait for the service to be updated.
+- `delete` - (Default `10m`) Time to wait for the service to be deleted.
+
+```terraform
+timeouts {
+  create = "60m"
+  update = "2h"
+  delete = "20m"
+}
+```
+
+### Agent deployment pacing
+
+The Cloud Agent deploys resources as a series of *phases*. The agent can be configured to control the rate at which resources and their components are deployed to the cluster, so a slow storage backend is never overwhelmed by many volumes and controllers being created at once.
+
+### On-premises environments with slow storage (e.g. NAS)
+
+In on-premises environments backed by slow disk such as a NAS, provisioning many volumes simultaneously can overwhelm the storage provisioner and cause timeouts or partial failures. To accommodate this:
+
+1. **Slow down the agent** by reducing `max_concurrent_heavy` and/or raising `timeout_factor` so the agent paces volume creation and controller rollout.
+2. **Add buffer to the Terraform timeout** by increasing `create` and `update` so the Terraform run allows the agent the extra time it needs to deploy everything. For example:
+
+```terraform
+resource "ametnes_service" "service" {
+  # ...
+
+  timeouts {
+    create = "2h"
+    update = "2h"
+    delete = "20m"
+  }
+}
+```
+
+> Note: the timeout is not a deployment deadline — it only bounds how long Terraform waits. Deployments that the agent completes more quickly will still finish as soon as the resource becomes ready.
 
 <a id="nestedblock--capacity"></a>
 ### Nested Schema for `capacity`
@@ -112,5 +174,3 @@ Read-Only:
 - `host` (String)
 - `name` (String)
 - `port` (String)
-
-

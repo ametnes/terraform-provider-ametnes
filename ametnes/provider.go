@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const AMETNES_HOST = "https://cloud.ametnes.com/api"
+const AMETNES_HOST = "https://cloud.ametnes.com/api/c/v1"
 
 // Provider -
 func Provider() *schema.Provider {

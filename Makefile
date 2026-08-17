@@ -3,7 +3,7 @@ HOSTNAME=ametnes.com
 NAMESPACE=cloud
 NAME=ametnes
 BINARY=terraform-provider-${NAME}
-VERSION=0.3
+VERSION=0.4
 OS_ARCH=darwin_amd64
 
 default: install
@@ -35,6 +35,9 @@ clean:
 test: 
 	go test -i $(TEST) || exit 1                                                   
 	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4                    
+
+testunit:
+	go test ./ametnes -v -run "_Unit|TestResourceService_NetworkFieldImmutability" -timeout=30s
 
 testacc: 
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m   

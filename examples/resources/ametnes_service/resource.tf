@@ -7,7 +7,6 @@ terraform {
 }
 
 provider "ametnes" {
-  host = "https://cloud.ametnes.com/api/c/v1"
   token = var.token
   username = var.username
 }
@@ -36,8 +35,6 @@ resource "ametnes_service" "grafana" {
   network = data.ametnes_network.network.id
   capacity {
     storage = 1
-    memory = 1
-    cpu = 1
   }
 
   config = {
@@ -46,6 +43,12 @@ resource "ametnes_service" "grafana" {
   }
  
   nodes = 1
+
+  timeouts {
+    create = "60m"
+    update = "2h"
+    delete = "20m"
+  }
 }
 
 output "gfn_connections" {

@@ -1,55 +1,59 @@
 terraform {
   required_providers {
     ametnes = {
-      # version = "0.3"
       source  = "ametnes.com/cloud/ametnes"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
     }
   }
 }
 
 provider "ametnes" {
-  // add you provider here
-  host = "https://cloud.ametnes.com/api/c/v1"
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
+provider "random" {}
+
 data "ametnes_project" "project" {
-  name = "Default"
+  name = var.project_name
 }
 
-data "ametnes_location" "location" {
-  name = "Ametnes"
-  code = "DSL-USE1"
+# The network attribute on the service is optional.
+# If omitted, a network resource is automatically created.
+
+resource "random_string" "service_alias" {
+  for_each = var.services
+  length   = 5
+  special  = false
+  upper    = false
 }
 
-data "ametnes_network" "network" {
-  name = "NETWORK-EUW7"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-}
-
-resource "ametnes_service" "grafana" {
-  name = "grafana43333"
-  project = data.ametnes_project.project.id
-  location = data.ametnes_location.location.id
-  kind = "grafana:9.3"
-  description = "sample grafana"
-  network = data.ametnes_network.network.id
+resource "ametnes_service" "service" {
+  for_each    = var.services
+  name        = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project     = data.ametnes_project.project.id
+  location    = var.location_id
+  kind        = each.value.kind
+  alias       = random_string.service_alias[each.key].result
   capacity {
-    storage = 1
-    memory = 1
-    cpu = 1
+    storage = each.value.storage
   }
-
   config = {
-    "auth.azuread.client_id" = "SomeText"
-    "auth.azuread.client_secret" = "SomeText"
+    architecture = each.value.architecture
+    "admin.email" = var.username
+    "public.visible" = "true"
   }
- 
   nodes = 1
+  timeouts {
+    create = "3h"
+    update = "3h"
+    delete = "20m"
+  }
 }
 
-output "gfn_connections" {
-  value = ametnes_service.grafana.connections
+output "service_connections" {
+  value = { for k, svc in ametnes_service.service : k => svc.connections }
 }
