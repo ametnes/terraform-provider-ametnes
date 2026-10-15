@@ -52,7 +52,7 @@ username = "you@example.com"
 terraform {
   required_providers {
     ametnes = {
-      source  = "ametnes.com/cloud/ametnes"
+      source = "ametnes.com/cloud/ametnes"
     }
   }
 }
@@ -81,8 +81,32 @@ the location id.
 resource "ametnes_location" "location" {
   name = "Ametnes Cloud"
   code = "EUW1"
+
+  # Load balancer policy for services created in this location: only private
+  # load balancers are allowed and new ones are private and cluster wide.
+  network {
+    public     = false
+    private    = true
+    visibility = "private"
+    scope      = "location"
+  }
+
+  # Opt in to Premium/Enterprise telemetry. Omit the block to leave it disabled.
+  telemetry {
+    resources {
+      logs    = true
+      metrics = true
+    }
+    system {
+      logs    = true
+      metrics = true
+    }
+  }
 }
 ```
+
+> **On-premises:** load balancer visibility (`public`/`private`) is irrelevant because every
+> load balancer is provisioned inside your own environment. Only the `scope` default applies.
 
 ### Create a project
 
@@ -95,47 +119,49 @@ resource "ametnes_project" "project" {
 }
 ```
 
-### Create a network
+### Create a network (load balancer)
 
-A network access resource exposes your data services. Depending on your Kubernetes cluster
-this may be a load balancer or a set of `NodePort`s. The `config` map accepts a `public` key:
+A network access resource is the load balancer that exposes your data services. Load
+balancers are **private by default**.
 
-- `"public" = "true"` - provisions a public-facing load balancer (default behavior).
-- `"public" = "false"` - provisions a private load balancer accessible only within the network.
+- `visibility` - `private` (default) or `public`.
+- `scope` - `location` (default, cluster wide, shared by every project in the location) or
+  `project` (only the owning project can attach).
+
+When you omit `visibility` or `scope`, the location's defaults apply.
+
+> **On-premises:** visibility is irrelevant because every load balancer is provisioned
+> inside your own environment. Only `scope` applies.
 
 ```terraform
 resource "ametnes_network" "network" {
-  name        = "NETWORK-EUW8"
-  project     = data.ametnes_project.project.id
-  location    = data.ametnes_location.location.id
-  description = "My load balancer resource"
-  config = {
-    "public" = "true"
-  }
+  name        = "NETWORK-EUW1"
+  project     = ametnes_project.project.id
+  location    = ametnes_location.location.id
+  description = "Cluster-wide private load balancer"
+  visibility  = "private"
+  scope       = "location"
 }
 ```
 
 ### Create data services
 
 Provision multiple services using a map for stable resource addressing. The `network`
-attribute is optional - if omitted, a network is automatically created. Compute sizing
-(CPU/memory) is driven by the `architecture` preset in `config`. `storage` is optional too
-- if omitted, the backend assigns a default value - and the value you set is distributed
-across all the components that make up the service in predetermined proportions.
+attribute is optional: **when omitted, the Ametnes control plane manages the load balancer
+for you**. It distributes services across the available load balancers, creating a new one
+when needed and deleting ones that are no longer used, which keeps load balancer costs
+optimal in public clouds (AWS, GKE, Azure).
+
+The control plane allocates a service's standard port first (PostgreSQL `5432`, for
+example) and falls back to the next free port when it is already taken - a second
+PostgreSQL service on the same load balancer binds `5433`. Always read the port from the
+service `connections` output rather than assuming the standard one.
+
+Compute sizing (CPU/memory) is driven by the `architecture` preset in `config`. `storage`
+is optional too - if omitted, the backend assigns a default value - and the value you set is
+distributed across all the components that make up the service in predetermined proportions.
 
 ```terraform
-terraform {
-  required_providers {
-    ametnes = {
-      source  = "ametnes.com/cloud/ametnes"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
-    }
-  }
-}
-
 # Look up an existing location.
 data "ametnes_location" "location" {
   name = "Ametnes Cloud"
@@ -147,6 +173,8 @@ data "ametnes_project" "project" {
   name = "Demo"
 }
 
+# Provision multiple services using a map for stable resource addressing.
+# The network attribute is omitted - a load balancer is managed automatically.
 locals {
   services = {
     sentry = { kind = "sentry:26.2", kind_name = "sentry", storage = 30, architecture = "Starter" },
@@ -182,16 +210,33 @@ output "service_connections" {
 }
 ```
 
+### Attach a service to a specific load balancer
+
+To pin a service to a load balancer you created, set the `network` attribute:
+
+```terraform
+resource "ametnes_service" "grafana" {
+  name     = "grafana"
+  project  = ametnes_project.project.id
+  location = ametnes_location.location.id
+  kind     = "grafana:9.3"
+  network  = ametnes_network.network.id
+  capacity {
+    storage = 1
+  }
+}
+```
+
 ### Look up existing resources
 
 ```terraform
 data "ametnes_project" "project" {
-  name = "Default"
+  name = "Demo"
 }
 
 data "ametnes_location" "location" {
-  name = "Ametnes"
-  code = "DSL-USE1"
+  name = "Ametnes Cloud"
+  code = "EUW1"
 }
 
 data "ametnes_network" "network" {

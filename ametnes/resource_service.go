@@ -80,7 +80,7 @@ Creates and manages a data service resource. All data service resources created 
 				Required:    false,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Configuration details for your data service resource.",
+				Description: "Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture` and `public.visible` (`\"true\"` requests a public load balancer, private is the default). On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.",
 			},
 			"alias": {
 				Type:        schema.TypeString,
@@ -93,7 +93,7 @@ Creates and manages a data service resource. All data service resources created 
 				Optional:    true,
 				ForceNew:    true,
 				Computed:    true,
-				Description: "Network resource your data service resource will be attached to in order to expose it.",
+				Description: "Network resource your data service resource will be attached to in order to expose it. If omitted, the Ametnes control plane manages a load balancer for the service automatically, distributing services across the available load balancers and allocating the next free port.",
 			},
 			"resource_id": {
 				Type:     schema.TypeString,
@@ -161,8 +161,11 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if config == nil {
 		config = make(map[string]interface{})
 	}
+	// Load balancers default to private. Set `public.visible` to `"true"` in the
+	// config map to request an internet facing load balancer, subject to the
+	// location's load balancer capabilities.
 	if _, ok := config["public.visible"]; !ok {
-		config["public.visible"] = "true"
+		config["public.visible"] = "false"
 	}
 	d.Set("config", config)
 
@@ -289,8 +292,9 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		if config == nil {
 			config = make(map[string]interface{})
 		}
+		// Load balancers default to private; see the create path for details.
 		if _, ok := config["public.visible"]; !ok {
-			config["public.visible"] = "true"
+			config["public.visible"] = "false"
 		}
 
 		// Update the resource with new values
@@ -388,16 +392,33 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 
 	// Set config if it exists (for both service and network resources)
 	if strings.HasPrefix(resource.Kind, "service/") || strings.HasPrefix(resource.Kind, "network/") {
+		isNetwork := strings.HasPrefix(resource.Kind, "network/")
 		if resource.Spec.Config != nil && len(resource.Spec.Config) > 0 {
-			// Convert map[string]interface{} to map[string]string for schema
+			// Convert map[string]interface{} to map[string]string for schema.
+			// For network resources the resolved visibility and scope are
+			// surfaced as dedicated attributes, so exclude them here.
 			configMap := make(map[string]string)
 			for k, v := range resource.Spec.Config {
+				if isNetwork && (k == "visibility" || k == "scope") {
+					continue
+				}
 				configMap[k] = fmt.Sprintf("%v", v)
 			}
 			d.Set("config", configMap)
 		} else {
 			// If config is empty or nil, set empty map
 			d.Set("config", make(map[string]string))
+		}
+
+		// Network resources expose the resolved visibility and scope as first
+		// class attributes so a value chosen by a location default is recorded.
+		if isNetwork {
+			if v, ok := resource.Spec.Config["visibility"]; ok {
+				d.Set("visibility", fmt.Sprintf("%v", v))
+			}
+			if v, ok := resource.Spec.Config["scope"]; ok {
+				d.Set("scope", fmt.Sprintf("%v", v))
+			}
 		}
 	}
 

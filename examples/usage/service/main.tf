@@ -44,6 +44,8 @@ resource "ametnes_service" "service" {
   config = {
     architecture = each.value.architecture
     "admin.email" = var.username
+    # Requests a public load balancer. On-premises visibility is irrelevant
+    # because every load balancer is provisioned inside your own environment.
     "public.visible" = "true"
   }
   timeouts {

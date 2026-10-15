@@ -407,7 +407,7 @@ func TestResourceNetworkUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
 	assert.Equal(t, "1/999", d.Id())
 }
 
-func TestResourceServiceCreate_DefaultsPublicVisibleToTrue(t *testing.T) {
+func TestResourceServiceCreate_DefaultsPublicVisibleToPrivate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -417,7 +417,7 @@ func TestResourceServiceCreate_DefaultsPublicVisibleToTrue(t *testing.T) {
 			json.NewDecoder(r.Body).Decode(&resource)
 			publicVisible, ok := resource.Spec.Config["public.visible"]
 			assert.True(t, ok, "expected public.visible to be present in config")
-			assert.Equal(t, "true", publicVisible, "expected public.visible to default to 'true'")
+			assert.Equal(t, "false", publicVisible, "expected public.visible to default to 'false'")
 			resource.Id = 999
 			resource.Status = "READY"
 			resource.Account = 100
@@ -575,7 +575,7 @@ func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) 
 			json.NewDecoder(r.Body).Decode(&resource)
 			publicVisible, ok := resource.Spec.Config["public.visible"]
 			assert.True(t, ok, "expected public.visible to be set when config is nil")
-			assert.Equal(t, "true", publicVisible, "expected public.visible to default to 'true'")
+			assert.Equal(t, "false", publicVisible, "expected public.visible to default to 'false'")
 			resource.Id = 999
 			resource.Status = "READY"
 			resource.Account = 100
