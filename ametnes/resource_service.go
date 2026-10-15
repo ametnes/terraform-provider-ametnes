@@ -161,12 +161,13 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 	if config == nil {
 		config = make(map[string]interface{})
 	}
-	// Load balancers default to private. Set `public.visible` to `"true"` in the
-	// config map to request an internet facing load balancer, subject to the
-	// location's load balancer capabilities.
-	if _, ok := config["public.visible"]; !ok {
-		config["public.visible"] = "false"
-	}
+	// Load balancers default to private at the control plane, so do not inject a
+	// `public.visible` default here. Injecting it into the request (and state)
+	// makes the server echo a key the HCL never declared; because the control
+	// plane merges config and never drops keys, every plan then shows a spurious
+	// in-place change. Set `public.visible` to `"true"` in the config map to
+	// request an internet facing load balancer, subject to the location's load
+	// balancer capabilities.
 	d.Set("config", config)
 
 	alias := ""
@@ -293,9 +294,8 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			config = make(map[string]interface{})
 		}
 		// Load balancers default to private; see the create path for details.
-		if _, ok := config["public.visible"]; !ok {
-			config["public.visible"] = "false"
-		}
+		// Do not inject a `public.visible` default here: it would be written
+		// back into state on the next read and show up as drift.
 
 		// Update the resource with new values
 		updateResource := Resource{
@@ -390,16 +390,19 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	// Set config if it exists (for both service and network resources)
-	if strings.HasPrefix(resource.Kind, "service/") || strings.HasPrefix(resource.Kind, "network/") {
-		isNetwork := strings.HasPrefix(resource.Kind, "network/")
+	// Set config for network resources. For service resources `config` is the
+	// desired input config and is intentionally left as the applied value: the
+	// control plane normalizes it (injects defaults, strips secrets, merges
+	// keys and never drops them), so mirroring the server copy back into state
+	// would create a perpetual diff against the HCL.
+	if strings.HasPrefix(resource.Kind, "network/") {
 		if resource.Spec.Config != nil && len(resource.Spec.Config) > 0 {
 			// Convert map[string]interface{} to map[string]string for schema.
-			// For network resources the resolved visibility and scope are
-			// surfaced as dedicated attributes, so exclude them here.
+			// The resolved visibility and scope are surfaced as dedicated
+			// attributes, so exclude them from the config map here.
 			configMap := make(map[string]string)
 			for k, v := range resource.Spec.Config {
-				if isNetwork && (k == "visibility" || k == "scope") {
+				if k == "visibility" || k == "scope" {
 					continue
 				}
 				configMap[k] = fmt.Sprintf("%v", v)
@@ -412,13 +415,11 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 
 		// Network resources expose the resolved visibility and scope as first
 		// class attributes so a value chosen by a location default is recorded.
-		if isNetwork {
-			if v, ok := resource.Spec.Config["visibility"]; ok {
-				d.Set("visibility", fmt.Sprintf("%v", v))
-			}
-			if v, ok := resource.Spec.Config["scope"]; ok {
-				d.Set("scope", fmt.Sprintf("%v", v))
-			}
+		if v, ok := resource.Spec.Config["visibility"]; ok {
+			d.Set("visibility", fmt.Sprintf("%v", v))
+		}
+		if v, ok := resource.Spec.Config["scope"]; ok {
+			d.Set("scope", fmt.Sprintf("%v", v))
 		}
 	}
 

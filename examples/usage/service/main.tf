@@ -54,7 +54,6 @@ resource "ametnes_service" "service" {
     "admin.password" = var.admin_password
     # Requests a public load balancer. On-premises visibility is irrelevant
     # because every load balancer is provisioned inside your own environment.
-    "public.visible" = "true"
   }
   timeouts {
     create = "3h"
