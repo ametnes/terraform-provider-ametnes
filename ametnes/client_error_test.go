@@ -310,7 +310,7 @@ func TestResourceNetworkCreate_FailsOnErrorState(t *testing.T) {
 	assert.Contains(t, diags[0].Summary, "ERROR state")
 }
 
-func getMockClientForUpdate() (*Client, *httptest.Server) {
+func getMockClientForUpdate(kind string) (*Client, *httptest.Server) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -320,7 +320,7 @@ func getMockClientForUpdate() (*Client, *httptest.Server) {
 				Id:          999,
 				Project:     1,
 				Account:     100,
-				Kind:        "service/mysql:8.0",
+				Kind:        kind,
 				Location:    "gcp/europe-west2",
 				Name:        "test-service",
 				Status:      "READY",
@@ -365,7 +365,7 @@ func getMockClientForUpdate() (*Client, *httptest.Server) {
 }
 
 func TestResourceServiceUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
-	client, server := getMockClientForUpdate()
+	client, server := getMockClientForUpdate("service/mysql:8.0")
 	defer server.Close()
 
 	rsrc := resourceService()
@@ -388,7 +388,7 @@ func TestResourceServiceUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
 }
 
 func TestResourceNetworkUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
-	client, server := getMockClientForUpdate()
+	client, server := getMockClientForUpdate("network/loadbalancer:1.0")
 	defer server.Close()
 
 	rsrc := resourceNetwork()
@@ -407,7 +407,7 @@ func TestResourceNetworkUpdate_WaitsForStatusAfterUpdate(t *testing.T) {
 	assert.Equal(t, "1/999", d.Id())
 }
 
-func TestResourceServiceCreate_DefaultsPublicVisibleToPrivate(t *testing.T) {
+func TestResourceServiceCreate_DoesNotInjectPublicVisible(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -415,9 +415,9 @@ func TestResourceServiceCreate_DefaultsPublicVisibleToPrivate(t *testing.T) {
 		case r.Method == "POST" && r.URL.Path == "/projects/1/resources":
 			var resource Resource
 			json.NewDecoder(r.Body).Decode(&resource)
-			publicVisible, ok := resource.Spec.Config["public.visible"]
-			assert.True(t, ok, "expected public.visible to be present in config")
-			assert.Equal(t, "false", publicVisible, "expected public.visible to default to 'false'")
+			if publicVisible, ok := resource.Spec.Config["public.visible"]; ok {
+				t.Errorf("did not expect public.visible to be injected when omitted from config, got %q", publicVisible)
+			}
 			resource.Id = 999
 			resource.Status = "READY"
 			resource.Account = 100
@@ -483,7 +483,7 @@ func TestResourceServiceCreate_DefaultsPublicVisibleToPrivate(t *testing.T) {
 	})
 
 	diags := resourceServiceCreate(context.Background(), d, client)
-	assert.False(t, diags.HasError(), "expected create to succeed with default public.visible")
+	assert.False(t, diags.HasError(), "expected create to succeed without injecting public.visible")
 }
 
 func TestResourceServiceCreate_PreservesExplicitPublicVisible(t *testing.T) {
@@ -565,7 +565,7 @@ func TestResourceServiceCreate_PreservesExplicitPublicVisible(t *testing.T) {
 	assert.False(t, diags.HasError(), "expected create to succeed with explicit public.visible")
 }
 
-func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) {
+func TestResourceServiceCreate_DoesNotInjectPublicVisibleWithNilConfig(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -573,9 +573,9 @@ func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) 
 		case r.Method == "POST" && r.URL.Path == "/projects/1/resources":
 			var resource Resource
 			json.NewDecoder(r.Body).Decode(&resource)
-			publicVisible, ok := resource.Spec.Config["public.visible"]
-			assert.True(t, ok, "expected public.visible to be set when config is nil")
-			assert.Equal(t, "false", publicVisible, "expected public.visible to default to 'false'")
+			if publicVisible, ok := resource.Spec.Config["public.visible"]; ok {
+				t.Errorf("did not expect public.visible to be injected when config is nil, got %q", publicVisible)
+			}
 			resource.Id = 999
 			resource.Status = "READY"
 			resource.Account = 100
@@ -641,5 +641,5 @@ func TestResourceServiceCreate_DefaultsPublicVisibleWithNilConfig(t *testing.T) 
 	})
 
 	diags := resourceServiceCreate(context.Background(), d, client)
-	assert.False(t, diags.HasError(), "expected create with nil config to succeed with public.visible default")
+	assert.False(t, diags.HasError(), "expected create with nil config to succeed without injecting public.visible")
 }

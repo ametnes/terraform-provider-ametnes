@@ -370,10 +370,11 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	d.Set("account", fmt.Sprint(resource.Account))
 	d.Set("name", resource.Name)
 	d.Set("description", resource.Description)
-	d.Set("alias", resource.Alias)
 
-	// Set network field only for service resources
+	// Set service-only fields (alias, network) only for service resources.
+	// Network resources do not declare these attributes in their schema.
 	if strings.HasPrefix(resource.Kind, "service/") {
+		d.Set("alias", resource.Alias)
 		d.Set("network", fmt.Sprintf("%d/%d", projectID, resource.Network))
 	}
 
@@ -440,7 +441,8 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		conns = append(conns, connMap)
 	}
 
-	if len(connections) != 0 {
+	// Connections are a service-only attribute.
+	if len(connections) != 0 && strings.HasPrefix(resource.Kind, "service/") {
 		d.Set("connections", conns)
 	}
 
