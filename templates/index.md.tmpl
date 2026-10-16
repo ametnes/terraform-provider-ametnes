@@ -29,5 +29,9 @@ Using the location id from above, setup your data service location. See instruct
 
 {{ tffile "examples/provider/example-resources.tf" }}
 
+### Networks (load balancers) and service exposure.
+
+Services are exposed through load balancers. Load balancers are **private by default** and can be **cluster wide** (`scope = "location"`, the default) or **project scoped** (`scope = "project"`). Where a service omits its `network`, the Ametnes control plane manages load balancers automatically: it distributes services across the available load balancers, creates new ones when needed and removes unused ones, and allocates each service's standard port first and the next free port when it is already taken. See the [ametnes_network](resources/network.md), [ametnes_location](resources/location.md) and [ametnes_service](resources/service.md) references.
+
 
 {{ .SchemaMarkdown | trimspace }}

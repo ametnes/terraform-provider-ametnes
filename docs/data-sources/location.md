@@ -45,6 +45,44 @@ data "ametnes_location" "location" {
 - `enabled` (Boolean) `true` if the location is enabled.
 - `id` (String) The ID of this resource.
 - `location` (String) Alternative ocation unique code.
+- `network` (List of Object) Load balancer policy for the location: allowed visibilities (`public`, `private`) and defaults (`visibility`, `scope`). On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment. (see [below for nested schema](#nestedatt--network))
 - `status` (String) Status of the location such as `OFFLINE`, `ONLINE`.
+- `telemetry` (List of Object) Telemetry the location's agent collects. (see [below for nested schema](#nestedatt--telemetry))
+
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
+
+Read-Only:
+
+- `private` (Boolean) Whether the location allows private (internal) load balancers.
+- `public` (Boolean) Whether the location allows public (internet facing) load balancers.
+- `scope` (String) Default load balancer scope at the location (`location` or `project`).
+- `visibility` (String) Default load balancer visibility at the location (`public` or `private`).
+
+
+<a id="nestedatt--telemetry"></a>
+### Nested Schema for `telemetry`
+
+Read-Only:
+
+- `resources` (List of Object) (see [below for nested schema](#nestedobjatt--telemetry--resources))
+- `system` (List of Object) (see [below for nested schema](#nestedobjatt--telemetry--system))
+
+<a id="nestedobjatt--telemetry--resources"></a>
+### Nested Schema for `telemetry.resources`
+
+Read-Only:
+
+- `logs` (Boolean) Whether logs are collected.
+- `metrics` (Boolean) Whether metrics are collected.
+
+
+<a id="nestedobjatt--telemetry--system"></a>
+### Nested Schema for `telemetry.system`
+
+Read-Only:
+
+- `logs` (Boolean) Whether logs are collected.
+- `metrics` (Boolean) Whether metrics are collected.
 
 

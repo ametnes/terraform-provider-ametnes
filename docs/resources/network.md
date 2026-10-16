@@ -3,22 +3,32 @@
 page_title: "ametnes_network Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s). The config map supports a `public` key to control whether a public or private load balancer is provisioned.
-
-~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
+  Creates and manages a network access resource (a load balancer). Load balancers are private by default and can be scoped to the whole location (cluster wide) or to a single project. When a service omits its network, the Ametnes control plane manages load balancers for it automatically.
 ---
 
 # ametnes_network (Resource)
 
 Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
 
-The `config` map accepts a `public` key:
+A network access resource is the **load balancer** that exposes your data services. It has two independent settings:
 
-- `"public" = "true"` - Provisions a public-facing load balancer (default behavior).
-- `"public" = "false"` - Provisions a private load balancer accessible only within the network.
+- **`visibility`** - who can reach the load balancer endpoint.
 
-When running outside a cloud environment, the `public` parameter is not used by the underlying infrastructure but should still be set. For services where a network is automatically created, toggling between `public` and `private` triggers the creation of a new load balancer resource
-which may be undesired.
+  - `private` (**default**) - an internal load balancer reachable only from inside the location's network.
+  - `public` - an internet-facing load balancer. Public visibility is only available at locations whose `network.public` capability is enabled.
+
+- **`scope`** - which projects may attach services to the load balancer.
+
+  - `location` (**default**) - the load balancer is **cluster wide**: every project in the location can attach services to it.
+  - `project` - the load balancer is **project scoped**: only services in the owning project (namespace) can attach to it.
+
+When you omit `visibility` or `scope`, the location's defaults apply (see [`ametnes_location`](location.md)). The resolved value is then recorded on the resource.
+
+-> **On-premises:** visibility is irrelevant because every load balancer is provisioned inside your own environment. Only `scope` (cluster wide vs project scoped) applies.
+
+The `config` map carries advanced options, for example `services_per_lb`, the number of services the control plane places on this load balancer before it creates another.
+
+~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
 ## Example Usage
 
@@ -45,13 +55,31 @@ data "ametnes_location" "location" {
   code = "DSL-USE1"
 }
 
+# A private, cluster-wide load balancer (the defaults). Services from any
+# project in the location can attach to it.
+#
+# On-premises: visibility is irrelevant because every load balancer is
+# provisioned inside your own environment.
 resource "ametnes_network" "network" {
   name        = "NETWORK-EUW8"
   project     = data.ametnes_project.project.id
   location    = data.ametnes_location.location.id
   description = "My load balancer resource"
+  visibility  = "private"
+  scope       = "location"
+}
+
+# A public, project-scoped load balancer. Only services in this project can
+# attach to it. Public requires a location that allows public load balancers.
+resource "ametnes_network" "public_project_network" {
+  name        = "NETWORK-PUBLIC-EUW8"
+  project     = data.ametnes_project.project.id
+  location    = data.ametnes_location.location.id
+  description = "Public, project scoped load balancer"
+  visibility  = "public"
+  scope       = "project"
   config = {
-    "public" = "true"
+    "services_per_lb" = "3"
   }
 }
 ```
@@ -67,9 +95,11 @@ resource "ametnes_network" "network" {
 
 ### Optional
 
-- `config` (Map of String) Configuration details for your network access resource. Commonly used keys include `public` (`"true"` for public-facing, `"false"` for private).
+- `config` (Map of String) Advanced configuration for your network access resource, for example `services_per_lb` (how many services to place on this load balancer before another is created). Use the dedicated `visibility` and `scope` attributes to control visibility and scope.
 - `description` (String) The description of your network access resource.
 - `kind` (String) The `kind` of your network access resource.
+- `scope` (String) Scope of the load balancer. `location` (the default) makes the load balancer cluster wide so every project in the location can attach services to it; `project` scopes it to the owning project (namespace) only. When omitted, the load balancer location default applies and the resolved value is recorded here.
+- `visibility` (String) Visibility of the load balancer. `private` (the default) provisions an internal load balancer reachable only inside the location; `public` provisions an internet facing load balancer. Public is only available at locations whose capabilities allow it. When omitted, the load balancer location default applies and the resolved value is recorded here. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
 
 ### Read-Only
 

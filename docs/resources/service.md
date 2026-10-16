@@ -3,16 +3,46 @@
 page_title: "ametnes_service Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages a data service resource. The network attribute is optional; if omitted, a network is automatically created.
+  Creates and manages a data service resource. The network attribute is optional; when omitted the Ametnes control plane manages the load balancer for you, distributing services across load balancers and allocating the next free port.
 ---
 
 # ametnes_service (Resource)
 
-Creates and manages a data service resource. The `network` attribute is optional; if omitted, a network resource is automatically created. Compute sizing (CPU/memory) is driven by the `architecture` preset in `config`.
+Creates and manages a data service resource. Compute sizing (CPU/memory) is driven by the `architecture` preset in `config`.
 
 The `capacity` block only exposes `storage`. It is optional - if omitted, the backend assigns a default value - and the value you set is distributed across all the components that make up the service in predetermined proportions.
 
 ~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
+
+## Exposing a service (load balancers)
+
+Every service is exposed through a load balancer. You have two options:
+
+1. **Let the control plane manage it (recommended).** Omit the `network` attribute. The Ametnes control plane then **automatically manages the distribution of services across the available load balancers**, creating a new load balancer when needed and deleting ones that are no longer used.
+
+   In a public cloud (AWS, GKE, Azure) each load balancer is a billable resource, so sharing them keeps costs optimal. The control plane packs services onto existing load balancers and only provisions more when a load balancer is full.
+
+2. **Bring your own load balancer.** Create an [`ametnes_network`](network.md) and attach it with the `network` attribute. The service is then pinned to that load balancer.
+
+### Port allocation
+
+Each load balancer endpoint is a `(load balancer, port)` pair. The control plane allocates the service's **standard port first** and falls back to the **next free port** when it is already taken, never colliding with a well-known port used by another service.
+
+For example, the first PostgreSQL service placed on a load balancer binds `5432`. If the control plane places a second PostgreSQL service on the same load balancer, it binds `5433` (the next free port). A later first-of-its-kind service still keeps its own standard port whenever it is free.
+
+The `connections` attribute records the host and the port actually granted, so read it rather than assuming the standard port:
+
+```terraform
+output "postgres_port" {
+  value = ametnes_service.postgres.connections[0].port
+}
+```
+
+### Visibility
+
+Load balancers default to **private**. To request an internet-facing load balancer for an auto-managed service, set `public.visible` to `"true"` in `config`. The request is honoured only if the service's location allows public load balancers (see [`ametnes_location`](location.md)).
+
+-> **On-premises:** visibility is irrelevant because every load balancer is provisioned inside your own environment.
 
 ## Example Usage
 
@@ -103,9 +133,9 @@ output "service_connections" {
 
 - `alias` (String) An optional alias for your data service resource.
 - `capacity` (Block List, Max: 1) Capacity specs for your data service resource. Only `storage` is configurable. (see [below for nested schema](#nestedblock--capacity))
-- `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, and service-specific configuration.
+- `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, `public.visible` (`"true"` requests a public load balancer, default `"false"`), and service-specific configuration. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
 - `description` (String) The description of your data service resource.
-- `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, a network is automatically created.
+- `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, the control plane manages a load balancer for the service automatically.
 
 ### Read-Only
 

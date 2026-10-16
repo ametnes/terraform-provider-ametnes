@@ -3,12 +3,61 @@
 page_title: "ametnes_location Resource - terraform-provider-ametnes"
 subcategory: ""
 description: |-
-  Creates and manages an Ametnes Data Service location.
+  Creates and manages an Ametnes Data Service location, including the load balancer policy and the telemetry collected by the location's agent.
 ---
 
 # ametnes_location (Resource)
 
 Creates and manages an Ametnes Data Service location.
+
+A location is a dedicated Kubernetes cluster with the Ametnes Cloud Agent installed. Its configuration controls how load balancers are provisioned for the services created in it, and which telemetry the agent collects. These settings are updated **in place**; the location identity (`name`, `code`, `description`) is immutable.
+
+## Load balancer policy
+
+The `network` block controls the load balancers used by services in the location. It combines two things:
+
+- **Capabilities** - the visibilities services are *allowed* to request:
+
+  - `public` - allow public (internet facing) load balancers. Defaults to `false`.
+  - `private` - allow private (internal) load balancers. Defaults to `true`.
+
+- **Defaults** - what a load balancer uses when a service or network does *not* choose one:
+
+  - `visibility` - `private` (default) or `public`.
+  - `scope` - `location` (default, cluster wide) or `project` (namespace scoped). See [`ametnes_network`](network.md) for how scope works.
+
+```terraform
+network {
+  public     = false
+  private    = true
+  visibility = "private"
+  scope      = "location"
+}
+```
+
+A location that allows only one visibility forces that visibility, so a service can never select a visibility the location does not support. When the block is omitted, the platform defaults apply.
+
+-> **On-premises:** load balancer visibility is irrelevant because every load balancer is provisioned inside your own environment. Only the `scope` default applies.
+
+## Telemetry
+
+The `telemetry` block switches the `logs` and `metrics` the agent collects for two scopes. They are **opt-in** and require a Premium or Enterprise plan; omit the block to leave telemetry disabled.
+
+- `resources` - logs and metrics for the data services (resources) running in the location.
+- `system` - logs and metrics for the location's system components.
+
+```terraform
+telemetry {
+  resources {
+    logs    = true
+    metrics = true
+  }
+  system {
+    logs    = true
+    metrics = true
+  }
+}
+```
 
 ## Example Usage
 
@@ -22,14 +71,38 @@ terraform {
 }
 
 provider "ametnes" {
-  token = var.token
+  token    = var.token
   username = var.username
 }
 
+# A private-only location that collects resource and system telemetry.
 resource "ametnes_location" "location" {
-  name = "Acme"
-  code = "USE1"
+  name        = "Acme"
+  code        = "USE1"
   description = "US-East-1 Data Service Location"
+
+  # Load balancer policy: only private load balancers are allowed, and new load
+  # balancers are private and cluster wide unless a service chooses otherwise.
+  # On-premises: visibility is irrelevant because every load balancer is
+  # provisioned inside your own environment; only scope applies.
+  network {
+    public     = false
+    private    = true
+    visibility = "private"
+    scope      = "location"
+  }
+
+  # Premium/Enterprise telemetry. Omit the block to leave telemetry disabled.
+  telemetry {
+    resources {
+      logs    = true
+      metrics = true
+    }
+    system {
+      logs    = true
+      metrics = true
+    }
+  }
 }
 ```
 
@@ -44,6 +117,8 @@ resource "ametnes_location" "location" {
 ### Optional
 
 - `description` (String) Description of the location.
+- `network` (Block List, Max: 1) Load balancer policy for services in this location: the visibilities they are allowed to request (`public`, `private`) and the defaults used when a service or network does not choose (`visibility`, `scope`). When omitted, the platform defaults apply. (see [below for nested schema](#nestedblock--network))
+- `telemetry` (Block List, Max: 1) Telemetry the location's agent collects. Requires a Premium or Enterprise plan. When omitted, all telemetry is disabled. (see [below for nested schema](#nestedblock--telemetry))
 
 ### Read-Only
 
@@ -52,4 +127,38 @@ resource "ametnes_location" "location" {
 - `location` (String)
 - `status` (String) The status of the data service location. This can be `OFFLINE` or `ONLINE`
 
+<a id="nestedblock--network"></a>
+### Nested Schema for `network`
 
+Optional:
+
+- `private` (Boolean) Whether this location allows **private** (internal) load balancers. Defaults to `true`. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
+- `public` (Boolean) Whether this location allows **public** (internet facing) load balancers. Capabilities are the visibilities services at the location are allowed to request. Defaults to `false`. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
+- `scope` (String) Default scope for load balancers created in this location when a service or network does not choose one. `location` (the default) makes them cluster wide so every project in the location can attach to them; `project` scopes them to the owning project (namespace) only.
+- `visibility` (String) Default visibility for load balancers created in this location when a service or network does not choose one. `private` (the default) provisions an internal load balancer; `public` provisions an internet facing one. Must be one of the allowed capabilities. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
+
+
+<a id="nestedblock--telemetry"></a>
+### Nested Schema for `telemetry`
+
+Optional:
+
+- `resources` (Block List, Max: 1) Telemetry for logs and metrics for the data services (resources) running at this location. (see [below for nested schema](#nestedblock--telemetry--resources))
+- `system` (Block List, Max: 1) Telemetry for logs and metrics for the location's system components. (see [below for nested schema](#nestedblock--telemetry--system))
+
+<a id="nestedblock--telemetry--resources"></a>
+### Nested Schema for `telemetry.resources`
+
+Optional:
+
+- `logs` (Boolean) Whether logs are collected. Requires a Premium or Enterprise plan.
+- `metrics` (Boolean) Whether metrics are collected. Requires a Premium or Enterprise plan.
+
+
+<a id="nestedblock--telemetry--system"></a>
+### Nested Schema for `telemetry.system`
+
+Optional:
+
+- `logs` (Boolean) Whether logs are collected. Requires a Premium or Enterprise plan.
+- `metrics` (Boolean) Whether metrics are collected. Requires a Premium or Enterprise plan.

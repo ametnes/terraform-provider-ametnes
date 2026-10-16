@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     ametnes = {
-      source  = "ametnes.com/cloud/ametnes"
+      source = "ametnes.com/cloud/ametnes"
     }
     random = {
       source  = "hashicorp/random"
@@ -21,8 +21,14 @@ data "ametnes_project" "project" {
   name = var.project_name
 }
 
+# Derive the location id from the location's unique name and code.
+data "ametnes_location" "location" {
+  name = var.location_name
+  code = var.location_code
+}
+
 # The network attribute on the service is optional.
-# If omitted, a network resource is automatically created.
+# If omitted, the Ametnes control plane manages a load balancer automatically.
 
 resource "random_string" "service_alias" {
   for_each = var.services
@@ -32,19 +38,22 @@ resource "random_string" "service_alias" {
 }
 
 resource "ametnes_service" "service" {
-  for_each    = var.services
-  name        = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
-  project     = data.ametnes_project.project.id
-  location    = var.location_id
-  kind        = each.value.kind
-  alias       = random_string.service_alias[each.key].result
+  for_each = var.services
+  name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
+  project  = data.ametnes_project.project.id
+  location = data.ametnes_location.location.id
+  kind     = each.value.kind
+  alias    = random_string.service_alias[each.key].result
   capacity {
     storage = each.value.storage
   }
   config = {
-    architecture = each.value.architecture
-    "admin.email" = var.username
-    "public.visible" = "true"
+    architecture     = each.value.architecture
+    "admin.email"    = var.username
+    "admin.user"     = var.admin_user
+    "admin.password" = var.admin_password
+    # Requests a public load balancer. On-premises visibility is irrelevant
+    # because every load balancer is provisioned inside your own environment.
   }
   timeouts {
     create = "3h"

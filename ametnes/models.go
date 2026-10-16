@@ -55,12 +55,13 @@ type Projects struct {
 }
 
 type Location struct {
-	Id          string `json:"id,omitempty"`
-	Description string `json:"description,omitempty"`
-	Enabled     bool   `json:"enabled,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Status      string `json:"status,omitempty"`
-	Location    string `json:"location,omitempty"`
+	Id          string                 `json:"id,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Enabled     bool                   `json:"enabled,omitempty"`
+	Name        string                 `json:"name,omitempty"`
+	Status      string                 `json:"status,omitempty"`
+	Location    string                 `json:"location,omitempty"`
+	Attributes  map[string]interface{} `json:"attributes,omitempty"`
 }
 
 type Locations struct {

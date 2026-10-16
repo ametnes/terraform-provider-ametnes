@@ -52,6 +52,31 @@ func (c *Client) CreateLocation(location Location) (*Location, error) {
 	return &newLoc, nil
 }
 
+func (c *Client) UpdateLocation(location Location) (*Location, error) {
+	rb, err := json.Marshal(location)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/metadata/locations/%s", c.HostURL, location.Id), strings.NewReader(string(rb)))
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := c.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	updated := Location{}
+	err = json.Unmarshal(data, &updated)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
+}
+
 func (c *Client) DeleteLocation(location Location) error {
 	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/metadata/locations/%s", c.HostURL, location.Id), nil)
 	if err != nil {

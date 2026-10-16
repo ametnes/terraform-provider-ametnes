@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `visibility` and `scope` attributes on `ametnes_network`. Load balancers are
+  now **private by default**; `scope` selects a cluster-wide (`location`, the
+  default) or project-scoped (`project`) load balancer. When omitted, the
+  location default applies and the resolved value is recorded. These replace
+  the previously documented `config["public"]` key.
+- A `network` block on `ametnes_location` carrying the load balancer policy:
+  `public`/`private` capabilities and `visibility`/`scope` defaults, plus a
+  `telemetry` block with `resources` and `system` scopes (each with
+  `logs`/`metrics`). These can be updated in place; the location identity
+  (`name`, `code`, `description`) stays immutable. The values mirror what the
+  Ametnes Cloud console edits through `PUT metadata/locations`.
+- New `UpdateLocation` client method that issues `PUT metadata/locations/{id}`.
+- The `ametnes_location` data source exposes the location's load balancer
+  capabilities/defaults and telemetry as read-only attributes.
+- Documentation explaining automatic load balancer management (distribution
+  across available load balancers, creation/deletion, and port allocation with
+  the standard-port-then-next-free-port fallback) and the location load balancer
+  policy, including that load balancer visibility (`public`/`private`) is
+  irrelevant on-premises because every load balancer is provisioned inside the
+  customer's own environment.
+
+### Changed
+- `ametnes_service` now defaults the auto-managed load balancer to **private**
+  (`config["public.visible"]` defaults to `"false"` instead of `"true"`). Set
+  `public.visible = "true"` to request a public load balancer, subject to the
+  location's capabilities.
+
 ## [0.4.0] - 2026-08-16
 
 ### Added

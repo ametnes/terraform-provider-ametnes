@@ -6,7 +6,20 @@ variable "username" {
   type = string
 }
 
-variable "location_id" {
+variable "admin_user" {
+  type = string
+}
+
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "location_code" {
+  type = string
+}
+
+variable "location_name" {
   type = string
 }
 

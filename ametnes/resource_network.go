@@ -9,15 +9,36 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const DefaultStorage = 1
 const DefaultNodes = 1
 
+// Load balancer visibility and scope values understood by the Ametnes control
+// plane. Visibility defaults to private; scope defaults to location (cluster
+// wide) and may be narrowed to a single project.
+const (
+	VisibilityPublic  = "public"
+	VisibilityPrivate = "private"
+
+	ScopeLocation = "location"
+	ScopeProject  = "project"
+)
+
 func resourceNetwork() *schema.Resource {
 	return &schema.Resource{
 		Description: `
-Creates and manages a network access resource. Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
+Creates and manages a network access resource (a load balancer). Depending on your kubernetes cluster, this resource may be a load balancer or an object that manages a set of NodePort(s).
+
+Load balancers are **private by default**. Use ` + "`visibility`" + ` to provision a public (` + "`public`" + `) or private (` + "`private`" + `) load balancer, and ` + "`scope`" + ` to control who can attach to it:
+
+- ` + "`location`" + ` (default) makes the load balancer cluster wide: every project in the location can attach services to it.
+- ` + "`project`" + ` scopes the load balancer to the owning project (namespace) only.
+
+Terraform only overrides ` + "`visibility`" + ` and ` + "`scope`" + ` when you set them; otherwise the location defaults apply (see ` + "`ametnes_location`" + `). The ` + "`config`" + ` map carries advanced options such as ` + "`services_per_lb`" + `.
+
+**On-premises:** visibility is irrelevant because every load balancer is provisioned inside your own environment.
 `,
 		CreateContext: resourceNetworkCreate,
 		ReadContext:   resourceServiceOrNetworkRead,
@@ -33,32 +54,32 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 		Schema: map[string]*schema.Schema{
 
 			"project": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true, // if the project name changes then we need to force new resource
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true, // if the project name changes then we need to force new resource
 				Description: "The `project` id of the project to create your network access resource.",
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
 				Description: "The unique name of your network access resource.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
 				Description: "The description of your network access resource.",
 			},
 			"kind": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "loadbalancer:1.0",
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Default:     "loadbalancer:1.0",
 				Description: "The `kind` of your network access resource.",
 			},
 			"location": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
 				Description: "The location id of your ametnes data service location to creat this network access resource in.",
 			},
 			"config": {
@@ -66,7 +87,21 @@ Creates and manages a network access resource. Depending on your kubernetes clus
 				Required:    false,
 				Optional:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Configuration details for your network access resource.",
+				Description: "Advanced configuration for your network access resource, for example `services_per_lb` (how many services to place on this load balancer before another is created). Use the dedicated `visibility` and `scope` attributes to control visibility and scope.",
+			},
+			"visibility": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{VisibilityPublic, VisibilityPrivate}, false),
+				Description:  "Visibility of the load balancer. `private` (the default) provisions an internal load balancer reachable only inside the location; `public` provisions an internet facing load balancer. Public is only available at locations whose capabilities allow it. When omitted, the load balancer location default applies and the resolved value is recorded here. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.",
+			},
+			"scope": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{ScopeLocation, ScopeProject}, false),
+				Description:  "Scope of the load balancer. `location` (the default) makes the load balancer cluster wide so every project in the location can attach services to it; `project` scopes it to the owning project (namespace) only. When omitted, the load balancer location default applies and the resolved value is recorded here.",
 			},
 
 			// computed
@@ -102,10 +137,7 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 	kind := d.Get("kind").(string)
 
-	var config map[string]interface{}
-	if v, ok := d.GetOk("config"); ok {
-		config = v.(map[string]interface{})
-	}
+	config := networkSpecConfig(d)
 
 	// we add network as prefix for network resource as thats how
 	// server differentiates from other resources like service.
@@ -150,7 +182,8 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Check if any updatable fields have changed
-	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("config")
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("config") ||
+		d.HasChange("visibility") || d.HasChange("scope")
 
 	if hasChanges {
 		client := m.(*Client)
@@ -178,11 +211,8 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			description = desc.(string)
 		}
 
-		// Get the config
-		var config map[string]interface{}
-		if v, ok := d.GetOk("config"); ok {
-			config = v.(map[string]interface{})
-		}
+		// Get the config, always including the resolved visibility and scope
+		config := networkSpecConfig(d)
 
 		// Update the resource with new values
 		updateResource := Resource{
@@ -225,4 +255,24 @@ func resourceNetworkUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 	// Read the updated resource state
 	return resourceServiceOrNetworkRead(ctx, d, m)
+}
+
+// networkSpecConfig builds the spec config sent to the control plane. The user
+// supplied `config` map is copied verbatim and the `visibility`/`scope`
+// attributes are layered on top only when set, so an unset attribute lets the
+// location default apply.
+func networkSpecConfig(d *schema.ResourceData) map[string]interface{} {
+	config := make(map[string]interface{})
+	if v, ok := d.GetOk("config"); ok {
+		for k, val := range v.(map[string]interface{}) {
+			config[k] = val
+		}
+	}
+	if v, ok := d.GetOk("visibility"); ok {
+		config["visibility"] = v.(string)
+	}
+	if v, ok := d.GetOk("scope"); ok {
+		config["scope"] = v.(string)
+	}
+	return config
 }
