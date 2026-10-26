@@ -42,6 +42,8 @@ resource "ametnes_service" "service" {
   name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
   project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
+  # Changing kind to a version on the current kind's upgrade path updates the
+  # service in place; Terraform does not plan a replacement.
   kind     = each.value.kind
   alias    = random_string.service_alias[each.key].result
   capacity {

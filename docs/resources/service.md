@@ -16,7 +16,7 @@ The `capacity` block only exposes `storage`. It is optional - if omitted, the ba
 
 ## Upgrading a service
 
-Changing `kind` to a newer version **upgrades the service in place**; it does not destroy and recreate it. The control plane validates the target against the current kind's catalog `upgrades` list and rolls the release forward, preserving the deployed service and its data.
+Changing `kind` to a newer version **upgrades the service in place**; Terraform plans an in-place update (`~`), not a replacement (`-/+`), and the deployed service, its data and its connections are preserved. The control plane validates the target against the current kind's catalog `upgrades` list and rolls the release forward.
 
 ```terraform
 resource "ametnes_service" "grafana" {
@@ -109,6 +109,8 @@ resource "ametnes_service" "service" {
   name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
   project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
+  # Changing kind to a version on the current kind's upgrade path updates the
+  # service in place.
   kind     = each.value.kind
   alias    = random_string.service_alias[each.key].result
   capacity {
