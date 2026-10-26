@@ -227,6 +227,30 @@ resource "ametnes_service" "grafana" {
 }
 ```
 
+### Upgrading a data service
+
+Changing `kind` to a newer version **updates the service in place** - Terraform does not plan a
+replacement, and the service, its data and its connections are preserved. The Ametnes control
+plane only accepts targets listed in the current kind's catalog upgrade path and rolls the Helm
+release forward.
+
+```terraform
+resource "ametnes_service" "grafana" {
+  # ...
+  kind = "grafana:9.3" # was grafana:8.5
+}
+```
+
+- Terraform shows an in-place update (`~ kind = "grafana:8.5" -> "grafana:9.3"`), not a
+  destroy/create (`-/+`).
+- Upgrade one step at a time when the catalog lists a chain (for example
+  `8.5` -> `9.3` -> `10.0` -> `12.3`).
+- A version upgrade and an `architecture` (tier) change must be separate applies: upgrade the
+  tier first, then the version.
+- Switching to a kind outside the upgrade path (for example moving from Matomo to Grafana) is
+  not an in-place upgrade; replace the resource explicitly with
+  `terraform apply -replace=ametnes_service.<name>` if that is intended.
+
 ### Look up existing resources
 
 ```terraform

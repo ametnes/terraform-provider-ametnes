@@ -42,6 +42,8 @@ resource "ametnes_service" "service" {
   name     = "${each.value.kind_name}-service-${random_string.service_alias[each.key].result}"
   project  = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
+  # Changing kind to a version on the current kind's upgrade path updates the
+  # service in place; Terraform does not plan a replacement.
   kind     = each.value.kind
   alias    = random_string.service_alias[each.key].result
   capacity {
@@ -52,8 +54,13 @@ resource "ametnes_service" "service" {
     "admin.email"    = var.username
     "admin.user"     = var.admin_user
     "admin.password" = var.admin_password
-    # Requests a public load balancer. On-premises visibility is irrelevant
-    # because every load balancer is provisioned inside your own environment.
+    # SMTP relay for services that send email (e.g. langfuse, sentry, gitlab,
+    # matomo). "ametnes" uses the Ametnes-managed relay. To use your own
+    # provider, pass a connection string instead, e.g.
+    # "smtp://apikey:KEY@smtp.sendgrid.net:587?from=name%40example.com"
+    # (percent-encode the password) or "smtps://user:pass@smtp.example.com:465".
+    # Remove the key to disable email.
+    "smtp" = "ametnes"
   }
   timeouts {
     create = "3h"

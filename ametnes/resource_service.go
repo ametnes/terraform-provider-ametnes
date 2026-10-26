@@ -48,10 +48,10 @@ Creates and manages a data service resource. All data service resources created 
 				Description: "The description of your network access resource.",
 			},
 			"kind": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`",
+				Type:     schema.TypeString,
+				Required: true,
+				Description: "The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`, `sentry:26.2`, `matomo:5.9`. " +
+					"Changing `kind` to a version listed in the current kind's upgrade path upgrades the service in place.",
 			},
 			"location": {
 				Type:        schema.TypeString,
@@ -245,8 +245,8 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	// Check if any updatable fields have changed
-	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("capacity") ||
-		d.HasChange("config") || d.HasChange("alias")
+	hasChanges := d.HasChange("name") || d.HasChange("description") || d.HasChange("kind") ||
+		d.HasChange("capacity") || d.HasChange("config") || d.HasChange("alias")
 
 	if hasChanges {
 		client := m.(*Client)
@@ -269,6 +269,12 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 		// Get updated fields
 		name := d.Get("name").(string)
+
+		// A kind change is an in-place upgrade. The control plane validates the
+		// target against the current kind's catalog `upgrades` list and rolls
+		// the service forward with Helm. Service kinds are stored with a
+		// `service/` prefix, matching the create path.
+		kind := fmt.Sprintf("service/%s", d.Get("kind").(string))
 		description := ""
 		if desc, ok := d.GetOk("description"); ok {
 			description = desc.(string)
@@ -302,7 +308,7 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 			Id:          existingResource.Id,
 			Project:     existingResource.Project,
 			Account:     existingResource.Account,
-			Kind:        existingResource.Kind,
+			Kind:        kind,
 			Location:    existingResource.Location,
 			Network:     existingResource.Network,
 			Name:        name,
@@ -376,6 +382,10 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	if strings.HasPrefix(resource.Kind, "service/") {
 		d.Set("alias", resource.Alias)
 		d.Set("network", fmt.Sprintf("%d/%d", projectID, resource.Network))
+		// Record the applied kind so an in-place upgrade (or a change made
+		// outside Terraform) is reflected in state. The control plane stores
+		// service kinds with a `service/` prefix.
+		d.Set("kind", strings.TrimPrefix(resource.Kind, "service/"))
 	}
 
 	// Set service-specific fields only for service resources

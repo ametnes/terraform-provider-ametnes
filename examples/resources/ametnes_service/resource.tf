@@ -30,6 +30,8 @@ resource "ametnes_service" "grafana" {
   name = "grafana43333"
   project = data.ametnes_project.project.id
   location = data.ametnes_location.location.id
+  # Changing kind to a version on the current kind's upgrade path upgrades the
+  # service in place; Terraform does not plan a replacement.
   kind = "grafana:9.3"
   description = "sample grafana"
   network = data.ametnes_network.network.id
