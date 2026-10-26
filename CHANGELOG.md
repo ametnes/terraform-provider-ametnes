@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`config["public.visible"]` defaults to `"false"` instead of `"true"`). Set
   `public.visible = "true"` to request a public load balancer, subject to the
   location's capabilities.
+- `ametnes_service.kind` no longer forces replacement. Changing `kind` to a
+  version listed in the current kind's catalog upgrade path upgrades the
+  service in place, matching the control plane API. In-place updates are now
+  also sent for `kind` changes, and the applied kind is read back into state.
 
 ## [0.4.0] - 2026-08-16
 

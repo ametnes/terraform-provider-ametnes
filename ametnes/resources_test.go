@@ -2,10 +2,14 @@ package ametnes
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -92,6 +96,99 @@ func TestResourceService_NetworkFieldImmutability(t *testing.T) {
 
 	require.True(t, diags.HasError(), "Expected error when changing 'network' field")
 	require.Contains(t, diags[0].Summary, "Changing the 'network' field is not permitted")
+}
+
+func TestResourceService_KindIsUpdatable(t *testing.T) {
+	resource := resourceService()
+
+	kind := resource.Schema["kind"]
+	require.NotNil(t, kind)
+	require.False(t, kind.ForceNew, "kind must not force replacement: the control plane upgrades services in place")
+}
+
+func TestResourceService_KindUpgradeSendsPrefixedKind(t *testing.T) {
+	var putResource Resource
+	appliedKind := "service/grafana:8.5"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.Method {
+		case http.MethodPut:
+			if err := json.NewDecoder(r.Body).Decode(&putResource); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			appliedKind = putResource.Kind
+			putResource.Status = "READY"
+			_ = json.NewEncoder(w).Encode(putResource)
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(Resource{
+				Id:          1,
+				Project:     1,
+				Account:     100,
+				Kind:        appliedKind,
+				Location:    "gcp/europe-west2",
+				Name:        "test-service",
+				Description: "test service",
+				Status:      "READY",
+				Network:     2,
+				Spec: Spec{
+					Components: map[string]interface{}{"storage": 10},
+					Nodes:      1,
+					Config:     map[string]interface{}{"architecture": "Starter"},
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{Type: Basic, Username: &username, Token: "test-token"})
+	require.NoError(t, err)
+
+	serviceResource := resourceService()
+	state := &terraform.InstanceState{
+		ID: "1/1",
+		Attributes: map[string]string{
+			"project":             "1",
+			"name":                "test-service",
+			"kind":                "grafana:8.5",
+			"location":            "gcp/europe-west2",
+			"network":             "1/2",
+			"capacity.#":          "1",
+			"capacity.0.storage":  "10",
+			"config.%":            "1",
+			"config.architecture": "Starter",
+		},
+	}
+	config := terraform.NewResourceConfigRaw(map[string]interface{}{
+		"project":  "1",
+		"name":     "test-service",
+		"kind":     "grafana:9.3",
+		"location": "gcp/europe-west2",
+		"network":  "1/2",
+		"capacity": []interface{}{
+			map[string]interface{}{"storage": 10},
+		},
+		"config": map[string]interface{}{"architecture": "Starter"},
+	})
+
+	ctx := context.Background()
+	diff, err := serviceResource.Diff(ctx, state, config, client)
+	require.NoError(t, err)
+	require.NotNil(t, diff)
+	require.False(t, diff.RequiresNew(), "changing kind must not require replacement")
+	require.Contains(t, diff.Attributes, "kind")
+
+	newState, diags := serviceResource.Apply(ctx, state, diff, client)
+	require.False(t, diags.HasError(), "update failed: %v", diags)
+
+	assert.Equal(t, "service/grafana:9.3", putResource.Kind)
+	require.NotNil(t, newState)
+	assert.Equal(t, "grafana:9.3", newState.Attributes["kind"])
 }
 
 func TestResourceService_Timeouts(t *testing.T) {

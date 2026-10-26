@@ -14,6 +14,21 @@ The `capacity` block only exposes `storage`. It is optional - if omitted, the ba
 
 ~> If resource creation fails (the resource enters `ERROR` state), the provider will fail immediately with an error. It does not wait for a timeout.
 
+## Upgrading a service
+
+Changing `kind` to a newer version **upgrades the service in place**; it does not destroy and recreate it. The control plane validates the target against the current kind's catalog `upgrades` list and rolls the release forward, preserving the deployed service and its data.
+
+```terraform
+resource "ametnes_service" "grafana" {
+  # ...
+  kind = "grafana:9.3" # previously grafana:8.5
+}
+```
+
+Only versions listed in the current kind's upgrade path are accepted; an unsupported target fails the apply with the permitted targets. A version upgrade cannot be combined with an `architecture` (tier) change in the same apply - upgrade the tier first, then the version.
+
+To move to a kind that is not on the upgrade path, replace the resource explicitly, for example `terraform apply -replace=ametnes_service.grafana`.
+
 ## Exposing a service (load balancers)
 
 Every service is exposed through a load balancer. You have two options:
@@ -124,7 +139,7 @@ output "service_connections" {
 
 ### Required
 
-- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`, `sentry:26.2`, `matomo:5.9`
+- `kind` (String) The `kind` of your data service resource. Examples: `grafana:8.3`, `harperdb:3.3`, `sentry:26.2`, `matomo:5.9`. Changing `kind` to a version listed in the current kind's upgrade path upgrades the service in place.
 - `location` (String) The location id of your ametnes data service location to create this data service resource in.
 - `name` (String) The unique name of your data service resource.
 - `project` (String) The `project` id of the project to create your data service resource in.
