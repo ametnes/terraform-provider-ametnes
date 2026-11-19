@@ -87,6 +87,14 @@ Creates and manages a data service resource. All data service resources created 
 				Optional:    true,
 				Description: "An optional alias for your data service resource.",
 			},
+			"delete_backups": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				Description: "Whether to delete the service's backups when it is destroyed. Defaults to `false`, " +
+					"which retains its backups for the location's backup retention window and leaves a temporary " +
+					"tombstone at the control plane. Set to `true` to remove the service and all of its backups immediately.",
+			},
 			// computed
 			"network": {
 				Type:        schema.TypeString,
@@ -367,10 +375,22 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 
 	resource, err := client.GetResource(projectID, resourceID)
 	if err != nil {
-		// if we get error while getting resource then
+		if isResourceGone(err) {
+			// The resource was deleted; drop it from state.
+			d.SetId("")
+			return nil
+		}
+		// Do not drop a resource from state because of a transient read error,
+		// or Terraform would lose track of a resource that still exists.
+		return diag.FromErr(fmt.Errorf("failed to read resource %d: %w", resourceID, err))
+	}
+
+	if resource.Status == "DELETED" {
+		// Deleted resources may be retained as tombstones; treat them as gone.
 		d.SetId("")
 		return nil
 	}
+
 	d.Set("resource_id", fmt.Sprint(resource.Id))
 	d.Set("status", resource.Status)
 	d.Set("account", fmt.Sprint(resource.Account))
@@ -473,16 +493,26 @@ func resourceServiceOrNetworkDelete(ctx context.Context, d *schema.ResourceData,
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	deleteBackups := false
+	if v, ok := d.Get("delete_backups").(bool); ok {
+		deleteBackups = v
+	}
+
 	err = client.DeleteResource(Resource{
 		Project: projectID,
 		Id:      resourceID,
-	})
+	}, deleteBackups)
 
 	if err != nil {
+		if isResourceGone(err) {
+			// The resource is already gone; DELETE is idempotent.
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
-	respChan := client.checkStatusDelete(projectID, resourceID)
+	respChan := client.checkStatusDelete(ctx, projectID, resourceID)
 	select {
 	case res := <-respChan:
 		if res.Success {
@@ -490,11 +520,15 @@ func resourceServiceOrNetworkDelete(ctx context.Context, d *schema.ResourceData,
 			d.SetId("")
 			return nil
 		}
+		if res.Error != nil {
+			return diag.FromErr(res.Error)
+		}
+		return diag.Errorf("Unknown error while checking for state after delete")
+	case <-ctx.Done():
+		return diag.FromErr(ctx.Err())
 	case <-time.After(d.Timeout(schema.TimeoutDelete)):
-		return diag.Errorf("Timeout occurred while checking for state")
+		return diag.Errorf("Timeout occurred while waiting for the service to be deleted")
 	}
-	// we will not get here
-	return nil
 }
 
 func expandCapacitySchema(in []interface{}) (*Capacity, error) {

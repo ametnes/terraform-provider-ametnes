@@ -1,9 +1,13 @@
 package ametnes
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Unit tests using mock HTTP server (no real API calls)
@@ -124,8 +128,29 @@ func TestClient_DeleteResource_Unit(t *testing.T) {
 	err := client.DeleteResource(Resource{
 		Id:      1,
 		Project: 1,
-	})
+	}, false)
 	assert.NoError(t, err)
+}
+
+func TestClient_DeleteResourceWithBackups_Unit(t *testing.T) {
+	var deleteBackups string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		deleteBackups = r.URL.Query().Get("delete_backups")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{Type: Basic, Username: &username, Token: "test-token"})
+	require.NoError(t, err)
+
+	err = client.DeleteResource(Resource{
+		Id:      1,
+		Project: 1,
+	}, true)
+	require.NoError(t, err)
+	assert.Equal(t, "true", deleteBackups, "delete with backups must send delete_backups=true")
 }
 
 func TestClient_GetLocations_Unit(t *testing.T) {
@@ -163,4 +188,3 @@ func TestClient_DeleteLocation_Unit(t *testing.T) {
 	err := client.DeleteLocation(Location{Id: "test.location"})
 	assert.NoError(t, err)
 }
-

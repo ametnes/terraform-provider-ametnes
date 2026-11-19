@@ -33,5 +33,6 @@ variable "services" {
     kind_name    = string
     storage      = number
     architecture = string
+    config       = optional(map(string), {})
   }))
 }

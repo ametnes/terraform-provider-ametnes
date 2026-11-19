@@ -251,6 +251,26 @@ resource "ametnes_service" "grafana" {
   not an in-place upgrade; replace the resource explicitly with
   `terraform apply -replace=ametnes_service.<name>` if that is intended.
 
+### Deleting a data service
+
+`delete_backups` is an optional argument that controls what `terraform destroy` does with the
+service's backups. It defaults to `false`:
+
+- `false` (default) - the service is removed but its backups are **retained** for the location's
+  backup retention window. The control plane keeps a temporary tombstone until the window
+  expires and then purges them.
+- `true` - the service and all of its backups are removed immediately.
+
+```terraform
+resource "ametnes_service" "grafana" {
+  # ...
+  # Optional; defaults to false.
+  delete_backups = true
+}
+```
+
+The argument is only read when the service is destroyed; it does not affect create or update.
+
 ### Look up existing resources
 
 ```terraform

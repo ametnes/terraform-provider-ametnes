@@ -9,7 +9,7 @@ import (
 )
 
 /*
-# curl -k -X GET "https://api-test.cloud.ametnes.com/v1/metadata/locations"
+# curl -k -X GET "https://cloud.ametnes.com/api/c/v1/metadata/locations"
 {
   "count": 2,
   "results": [

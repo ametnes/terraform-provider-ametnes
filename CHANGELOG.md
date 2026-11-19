@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`name`, `code`, `description`) stays immutable. The values mirror what the
   Ametnes Cloud console edits through `PUT metadata/locations`.
 - New `UpdateLocation` client method that issues `PUT metadata/locations/{id}`.
+- `delete_backups` attribute on `ametnes_service`. When `true`, destroying the
+  service deletes its backups immediately (`?delete_backups=true`); the default
+  keeps the control-plane behaviour of retaining backups for the location's
+  retention window and leaving a temporary tombstone.
 - The `ametnes_location` data source exposes the location's load balancer
   capabilities/defaults and telemetry as read-only attributes.
 - Documentation explaining automatic load balancer management (distribution
@@ -38,6 +42,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version listed in the current kind's catalog upgrade path upgrades the
   service in place, matching the control plane API. In-place updates are now
   also sent for `kind` changes, and the applied kind is read back into state.
+
+### Fixed
+- `terraform destroy` no longer waits for the full delete timeout when the
+  control plane retains a deleted service as a tombstone. Delete polling now
+  succeeds on a `DELETED` status or a 404, retries transient server errors,
+  fails fast on permanent 4xx errors, and honours context cancellation.
+- Deleting an already-deleted service is now a success, so `terraform destroy`
+  is idempotent and no longer fails with `Resource id ... not found in project
+  ...`. The same response during refresh drops the stale resource from state.
+- Refresh no longer drops a resource from state on a transient read error; only
+  a 404 (or a `DELETED` tombstone) removes it.
+- `ametnes_kinds` now queries the configured provider `host` with the provider
+  credentials. It previously used a hardcoded test-environment base URL, which
+  ignored `host`, `token`, `timeout` and `insecure`.
+- `ametnes_kinds` no longer fails with `Invalid address to set` when the catalog
+  returns `storage`, `memory` or `cpu` inside `limits`, or `quiesce` inside
+  `backups`. The data source now maps only the documented `nodes` limit and the
+  `enabled` backup flag instead of copying those maps verbatim.
+- `ametnes_kinds` now reports `enabled = true` for the returned catalogue kinds.
+  The control plane only returns enabled kinds and omits the field, so it was
+  previously always reported as `false`.
 
 ## [0.4.0] - 2026-08-16
 
