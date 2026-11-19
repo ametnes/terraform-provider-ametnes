@@ -2,10 +2,6 @@ package ametnes
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -24,18 +20,18 @@ func dataSourceKinds() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:        schema.TypeString,
+							Computed:    true,
 							Description: "Unique backend identifier for the resource kind. Example: `e834def`.",
 						},
 						"name": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:        schema.TypeString,
+							Computed:    true,
 							Description: "Name of the resource kind.",
 						},
 						"kind": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:        schema.TypeString,
+							Computed:    true,
 							Description: "Kind code to be used when creating resources. Example `service/grafana:8.3`",
 						},
 						"locations": {
@@ -85,11 +81,11 @@ func dataSourceKinds() *schema.Resource {
 									},
 								},
 							},
-							Description: "Capacity limits for this resource kind. These include `storage` as well as the number of `nodes` that can be scaled to.",
+							Description: "Capacity limits for this resource kind. Currently exposes the number of `nodes` that can be scaled to.",
 						},
 						"type": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:        schema.TypeString,
+							Computed:    true,
 							Description: "Global kind code to be used only for information. Example `service/grafana`",
 						},
 						"release": {
@@ -97,8 +93,8 @@ func dataSourceKinds() *schema.Resource {
 							Computed: true,
 						},
 						"enabled": {
-							Type:     schema.TypeBool,
-							Computed: true,
+							Type:        schema.TypeBool,
+							Computed:    true,
 							Description: "`true` if resourcees of this kind can be created.",
 						},
 					},
@@ -109,36 +105,12 @@ func dataSourceKinds() *schema.Resource {
 }
 
 func dataSourceKindsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := m.(*Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/metadata/resources/kinds", "https://api-test.cloud.ametnes.com/v1"), nil)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	r, err := client.Do(req)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	defer r.Body.Close()
-
-	// Check HTTP status code
-	if r.StatusCode != http.StatusOK {
-		bodyBytes, _ := ioutil.ReadAll(r.Body)
-		return diag.Errorf("API request failed with status %d: %s", r.StatusCode, string(bodyBytes))
-	}
-
-	// Read body for JSON decoding
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	var kinds map[string]interface{}
-	err = json.Unmarshal(bodyBytes, &kinds)
+	kinds, err := client.GetKinds()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -167,17 +139,33 @@ func dataSourceKindsRead(ctx context.Context, d *schema.ResourceData, m interfac
 		_kind["id"] = kind["id"]
 		_kind["name"] = kind["name"]
 		_kind["type"] = kind["type"]
-		_kind["enabled"] = kind["enabled"]
+		enabled := true
+		if value, ok := kind["enabled"].(bool); ok {
+			enabled = value
+		}
+		_kind["enabled"] = enabled
 		_kind["release"] = kind["release"]
 		_kind["locations"] = kind["locations"]
 		_kind["kind"] = kind["kind"]
 
+		limitEntry := map[string]interface{}{}
+		if rawLimits, ok := kind["limits"].(map[string]interface{}); ok {
+			if nodes, ok := rawLimits["nodes"]; ok {
+				limitEntry["nodes"] = nodes
+			}
+		}
 		limits := make([]interface{}, 1)
-		limits[0] = kind["limits"]
+		limits[0] = limitEntry
 		_kind["limits"] = limits
 
+		backupEntry := map[string]interface{}{}
+		if rawBackups, ok := kind["backups"].(map[string]interface{}); ok {
+			if enabled, ok := rawBackups["enabled"]; ok {
+				backupEntry["enabled"] = enabled
+			}
+		}
 		backups := make([]interface{}, 1)
-		backups[0] = kind["backups"]
+		backups[0] = backupEntry
 		_kind["backups"] = backups
 
 		_kind["tools"] = nil

@@ -1,12 +1,53 @@
 package ametnes
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
+
+// APIError is returned when the Ametnes API responds with a non-200 status.
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("status: %d, body: %s", e.StatusCode, e.Body)
+}
+
+func isNotFoundError(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
+}
+
+// isResourceGone reports whether the error means the resource no longer exists.
+// A deleted resource is reported as 404. Older cloud API builds surface the same
+// condition as a 400 "not found" message, so accept that too.
+func isResourceGone(err error) bool {
+	if isNotFoundError(err) {
+		return true
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusBadRequest {
+		body := strings.ToLower(apiErr.Body)
+		return strings.Contains(body, "resource") && strings.Contains(body, "not found")
+	}
+	return false
+}
+
+// isPermanentAPIError reports whether retrying the request cannot succeed, such
+// as an authentication, authorization or malformed request failure. Server
+// errors and transport failures are treated as transient.
+func isPermanentAPIError(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode >= 400 && apiErr.StatusCode < 500
+}
 
 // HostURL - Default Hashicups URL
 // const HostURL string = "http://localhost:19090"
@@ -79,7 +120,7 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status: %d, body: %s", res.StatusCode, body)
+		return nil, &APIError{StatusCode: res.StatusCode, Body: string(body)}
 	}
 
 	return body, err
@@ -107,13 +148,13 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 				close(respChan)
 				return
 			}
-		if resource.Status == "READY" || resource.Status == "INITIALIZED" {
-			respChan <- Status{
-				Success: true,
+			if resource.Status == "READY" || resource.Status == "INITIALIZED" {
+				respChan <- Status{
+					Success: true,
+				}
+				close(respChan)
+				return
 			}
-			close(respChan)
-			return
-		}
 			time.Sleep(30 * time.Second)
 		}
 
@@ -122,33 +163,52 @@ func (c *Client) checkStatus(projectID, resourceID int) chan Status {
 	return respChan
 }
 
-func (c *Client) checkStatusDelete(projectID, resourceID int) chan Status {
-	respChan := make(chan Status)
+func (c *Client) checkStatusDelete(ctx context.Context, projectID, resourceID int) chan Status {
+	respChan := make(chan Status, 1)
 
 	go func() {
+		defer close(respChan)
+
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
 		for {
 			resource, err := c.GetResource(projectID, resourceID)
-			// if there is an error while getting the resource then mostly the resource is deleted
-			if err != nil {
-				respChan <- Status{
-					Success: true,
-				}
-				close(respChan)
+			switch {
+			case err == nil && resource.Status == "DELETED":
+				// The control plane may keep deleted resources as tombstones,
+				// so a successful read can still mean the delete is complete.
+				respChan <- Status{Success: true}
 				return
-			}
-
-			if resource != nil && resource.Status == "ERROR" {
+			case err == nil && resource.Status == "ERROR":
 				respChan <- Status{
 					Success: false,
 					Error:   fmt.Errorf("error while deleting resource id %d", resourceID),
 				}
-				close(respChan)
+				return
+			case isResourceGone(err):
+				// The control plane reports the resource as absent once it has
+				// been deleted.
+				respChan <- Status{Success: true}
+				return
+			case isPermanentAPIError(err):
+				// Authentication/authorization or a malformed request will not
+				// succeed on retry. Do not report a successful delete while the
+				// resource may still exist.
+				respChan <- Status{
+					Success: false,
+					Error:   fmt.Errorf("error while deleting resource id %d: %w", resourceID, err),
+				}
 				return
 			}
 
-			time.Sleep(10 * time.Second)
+			select {
+			case <-ctx.Done():
+				respChan <- Status{Success: false, Error: ctx.Err()}
+				return
+			case <-ticker.C:
+			}
 		}
-
 	}()
 
 	return respChan

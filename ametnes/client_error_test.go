@@ -191,12 +191,107 @@ func TestCheckStatusDelete_ReturnsErrorOnErrorState(t *testing.T) {
 	client, server := getMockClientForStatus("ERROR")
 	defer server.Close()
 
-	respChan := client.checkStatusDelete(1, 1)
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
 
 	select {
 	case res := <-respChan:
 		assert.False(t, res.Success, "expected Success to be false on ERROR status")
 		assert.Error(t, res.Error, "expected an error on ERROR status during delete")
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsSuccessOnDeletedTombstone(t *testing.T) {
+	client, server := getMockClientForStatus("DELETED")
+	defer server.Close()
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "expected Success on DELETED status")
+		assert.NoError(t, res.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsSuccessOnNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "not found"})
+	}))
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{
+		Type:     Basic,
+		Username: &username,
+		Token:    "test-token",
+	})
+	assert.NoError(t, err)
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "expected Success when the resource is not found")
+		assert.NoError(t, res.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsSuccessOnLegacyNotFound(t *testing.T) {
+	// Older cloud API builds report a deleted resource as 400 "not found"
+	// instead of 404. That is still a completed delete, not a failure.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Resource id 1 not found in project 1",
+			"type":    "ERROR",
+		})
+	}))
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{
+		Type:     Basic,
+		Username: &username,
+		Token:    "test-token",
+	})
+	assert.NoError(t, err)
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "expected Success for a legacy not-found response")
+		assert.NoError(t, res.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsErrorOnUnauthorized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "unauthorized"})
+	}))
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{
+		Type:     Basic,
+		Username: &username,
+		Token:    "test-token",
+	})
+	assert.NoError(t, err)
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.False(t, res.Success, "a permanent API error must not be reported as a successful delete")
+		assert.Error(t, res.Error)
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for checkStatusDelete to return")
 	}
@@ -317,20 +412,20 @@ func getMockClientForUpdate(kind string) (*Client, *httptest.Server) {
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/projects/1/resources/999":
 			resource := Resource{
-				Id:          999,
-				Project:     1,
-				Account:     100,
-				Kind:        kind,
-				Location:    "gcp/europe-west2",
-				Name:        "test-service",
-				Status:      "READY",
-				Network:     1,
+				Id:       999,
+				Project:  1,
+				Account:  100,
+				Kind:     kind,
+				Location: "gcp/europe-west2",
+				Name:     "test-service",
+				Status:   "READY",
+				Network:  1,
 				Spec: Spec{
 					Components: map[string]interface{}{
 						"storage": 1,
 					},
-					Nodes:   1,
-					Config:  map[string]interface{}{},
+					Nodes:    1,
+					Config:   map[string]interface{}{},
 					Networks: []Networks{{Id: 1}},
 					Connection: Connection{
 						Host: "test.example.com",
@@ -432,20 +527,20 @@ func TestResourceServiceCreate_DoesNotInjectPublicVisible(t *testing.T) {
 
 		case r.Method == "GET" && r.URL.Path == "/projects/1/resources/999":
 			resource := Resource{
-				Id:          999,
-				Project:     1,
-				Account:     100,
-				Kind:        "service/mysql:8.0",
-				Location:    "gcp/europe-west2",
-				Name:        "test-service",
-				Status:      "READY",
-				Network:     1,
+				Id:       999,
+				Project:  1,
+				Account:  100,
+				Kind:     "service/mysql:8.0",
+				Location: "gcp/europe-west2",
+				Name:     "test-service",
+				Status:   "READY",
+				Network:  1,
 				Spec: Spec{
 					Components: map[string]interface{}{
 						"storage": 1,
 					},
-					Nodes:   1,
-					Config:  map[string]interface{}{"public.visible": "true"},
+					Nodes:    1,
+					Config:   map[string]interface{}{"public.visible": "true"},
 					Networks: []Networks{{Id: 1}},
 					Connection: Connection{
 						Host: "test.example.com",
@@ -510,20 +605,20 @@ func TestResourceServiceCreate_PreservesExplicitPublicVisible(t *testing.T) {
 
 		case r.Method == "GET" && r.URL.Path == "/projects/1/resources/999":
 			resource := Resource{
-				Id:          999,
-				Project:     1,
-				Account:     100,
-				Kind:        "service/mysql:8.0",
-				Location:    "gcp/europe-west2",
-				Name:        "test-service",
-				Status:      "READY",
-				Network:     1,
+				Id:       999,
+				Project:  1,
+				Account:  100,
+				Kind:     "service/mysql:8.0",
+				Location: "gcp/europe-west2",
+				Name:     "test-service",
+				Status:   "READY",
+				Network:  1,
 				Spec: Spec{
 					Components: map[string]interface{}{
 						"storage": 1,
 					},
-					Nodes:   1,
-					Config:  map[string]interface{}{"public.visible": "false"},
+					Nodes:    1,
+					Config:   map[string]interface{}{"public.visible": "false"},
 					Networks: []Networks{{Id: 1}},
 					Connection: Connection{
 						Host: "test.example.com",
@@ -590,20 +685,20 @@ func TestResourceServiceCreate_DoesNotInjectPublicVisibleWithNilConfig(t *testin
 
 		case r.Method == "GET" && r.URL.Path == "/projects/1/resources/999":
 			resource := Resource{
-				Id:          999,
-				Project:     1,
-				Account:     100,
-				Kind:        "service/mysql:8.0",
-				Location:    "gcp/europe-west2",
-				Name:        "test-service",
-				Status:      "READY",
-				Network:     1,
+				Id:       999,
+				Project:  1,
+				Account:  100,
+				Kind:     "service/mysql:8.0",
+				Location: "gcp/europe-west2",
+				Name:     "test-service",
+				Status:   "READY",
+				Network:  1,
 				Spec: Spec{
 					Components: map[string]interface{}{
 						"storage": 1,
 					},
-					Nodes:   1,
-					Config:  map[string]interface{}{"public.visible": "true"},
+					Nodes:    1,
+					Config:   map[string]interface{}{"public.visible": "true"},
 					Networks: []Networks{{Id: 1}},
 					Connection: Connection{
 						Host: "test.example.com",

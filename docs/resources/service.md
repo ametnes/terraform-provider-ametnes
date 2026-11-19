@@ -29,6 +29,22 @@ Only versions listed in the current kind's upgrade path are accepted; an unsuppo
 
 To move to a kind that is not on the upgrade path, replace the resource explicitly, for example `terraform apply -replace=ametnes_service.grafana`.
 
+## Deleting a service and its backups
+
+`delete_backups` is an **optional** argument. It defaults to `false`, which matches the control-plane default: `terraform destroy` removes the service but **retains its backups** for the location's backup retention window. The resource is kept as a temporary tombstone until the window expires, and the backups are purged then.
+
+Set the optional `delete_backups` argument to `true` to remove the service and all of its backups immediately:
+
+```terraform
+resource "ametnes_service" "grafana" {
+  # ...
+  # Optional; defaults to false.
+  delete_backups = true
+}
+```
+
+The argument is only used when the service is destroyed; it does not affect create or update.
+
 ## Exposing a service (load balancers)
 
 Every service is exposed through a load balancer. You have two options:
@@ -121,6 +137,11 @@ resource "ametnes_service" "service" {
     "admin.email" = var.username
   }
 
+  # Optional. When true, destroying the service also deletes all of its
+  # backups. Defaults to false, which retains them for the location's backup
+  # retention window.
+  # delete_backups = true
+
   # Optional. Override the time the provider waits for the resource to
   # reach a stable state during create/update/delete. Useful for
   # long-running deployments. Defaults: create 60m, update 45m, delete 10m.
@@ -151,6 +172,7 @@ output "service_connections" {
 - `alias` (String) An optional alias for your data service resource.
 - `capacity` (Block List, Max: 1) Capacity specs for your data service resource. Only `storage` is configurable. (see [below for nested schema](#nestedblock--capacity))
 - `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, `public.visible` (`"true"` requests a public load balancer, default `"false"`), and service-specific configuration. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
+- `delete_backups` (Boolean) Whether to delete the service's backups when it is destroyed. Defaults to `false`, which retains its backups for the location's backup retention window and leaves a temporary tombstone at the control plane. Set to `true` to remove the service and all of its backups immediately.
 - `description` (String) The description of your data service resource.
 - `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, the control plane manages a load balancer for the service automatically.
 

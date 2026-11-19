@@ -216,3 +216,79 @@ func TestResourceNetwork_Timeouts(t *testing.T) {
 	assert.Equal(t, 15*time.Minute, *resource.Timeouts.Update)
 	assert.Equal(t, 10*time.Minute, *resource.Timeouts.Delete)
 }
+
+func TestResourceService_DeleteBackupsAttribute(t *testing.T) {
+	resource := resourceService()
+
+	attr := resource.Schema["delete_backups"]
+	require.NotNil(t, attr)
+	assert.Equal(t, schema.TypeBool, attr.Type)
+	assert.True(t, attr.Optional)
+	assert.Equal(t, false, attr.Default, "backups must be retained by default, matching the control plane")
+	assert.False(t, attr.ForceNew, "changing delete_backups must not replace the service")
+}
+
+func TestResourceServiceDelete_TreatsNotFoundAsSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Resource id 1 not found in project 1",
+		})
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{Type: Basic, Username: &username, Token: "test-token"})
+	require.NoError(t, err)
+
+	d := schema.TestResourceDataRaw(t, resourceService().Schema, map[string]interface{}{})
+	d.SetId("1/1")
+
+	diags := resourceService().DeleteContext(context.Background(), d, client)
+	require.False(t, diags.HasError(), "deleting an already-deleted resource must succeed: %v", diags)
+	assert.Empty(t, d.Id(), "an already-deleted resource must be dropped from state")
+}
+
+func TestResourceServiceRead_ClearsStateForDeletedTombstone(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Resource{
+			Id:      1,
+			Project: 1,
+			Account: 100,
+			Kind:    "service/redis:8.10",
+			Status:  "DELETED",
+		})
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{Type: Basic, Username: &username, Token: "test-token"})
+	require.NoError(t, err)
+
+	d := schema.TestResourceDataRaw(t, resourceService().Schema, map[string]interface{}{})
+	d.SetId("1/1")
+
+	diags := resourceServiceOrNetworkRead(context.Background(), d, client)
+	require.False(t, diags.HasError(), "read failed: %v", diags)
+	assert.Empty(t, d.Id(), "a deleted tombstone must be dropped from state")
+}
+
+func TestResourceServiceRead_KeepsStateOnTransientError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "server error"})
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{Type: Basic, Username: &username, Token: "test-token"})
+	require.NoError(t, err)
+
+	d := schema.TestResourceDataRaw(t, resourceService().Schema, map[string]interface{}{})
+	d.SetId("1/1")
+
+	diags := resourceServiceOrNetworkRead(context.Background(), d, client)
+	require.True(t, diags.HasError(), "a transient read error must be surfaced")
+	assert.Equal(t, "1/1", d.Id(), "a transient read error must not drop the resource from state")
+}

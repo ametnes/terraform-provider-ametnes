@@ -97,8 +97,15 @@ func (c *Client) UpdateResource(resource Resource) (*Resource, error) {
 	return &n_resource, nil
 }
 
-func (c *Client) DeleteResource(resource Resource) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/projects/%d/resources/%d", c.HostURL, resource.Project, resource.Id), nil)
+func (c *Client) DeleteResource(resource Resource, deleteBackups bool) error {
+	url := fmt.Sprintf("%s/projects/%d/resources/%d", c.HostURL, resource.Project, resource.Id)
+	if deleteBackups {
+		// Without this flag the control plane keeps the resource's backups for
+		// the configured retention window and retains a temporary tombstone.
+		url = fmt.Sprintf("%s?delete_backups=true", url)
+	}
+
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
 	}
