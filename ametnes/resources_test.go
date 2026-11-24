@@ -249,7 +249,7 @@ func TestResourceServiceDelete_TreatsNotFoundAsSuccess(t *testing.T) {
 	assert.Empty(t, d.Id(), "an already-deleted resource must be dropped from state")
 }
 
-func TestResourceServiceRead_ClearsStateForDeletedTombstone(t *testing.T) {
+func TestResourceServiceRead_ClearsStateForDeletedResource(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(Resource{
@@ -271,7 +271,7 @@ func TestResourceServiceRead_ClearsStateForDeletedTombstone(t *testing.T) {
 
 	diags := resourceServiceOrNetworkRead(context.Background(), d, client)
 	require.False(t, diags.HasError(), "read failed: %v", diags)
-	assert.Empty(t, d.Id(), "a deleted tombstone must be dropped from state")
+	assert.Empty(t, d.Id(), "a deleted resource must be dropped from state")
 }
 
 func TestResourceServiceRead_KeepsStateOnTransientError(t *testing.T) {

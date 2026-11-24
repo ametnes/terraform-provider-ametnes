@@ -231,8 +231,7 @@ resource "ametnes_service" "grafana" {
 
 Changing `kind` to a newer version **updates the service in place** - Terraform does not plan a
 replacement, and the service, its data and its connections are preserved. The Ametnes control
-plane only accepts targets listed in the current kind's catalog upgrade path and rolls the Helm
-release forward.
+plane only accepts targets listed in the current kind's catalog upgrade path and rolls the service forward.
 
 ```terraform
 resource "ametnes_service" "grafana" {
@@ -257,8 +256,7 @@ resource "ametnes_service" "grafana" {
 service's backups. It defaults to `false`:
 
 - `false` (default) - the service is removed but its backups are **retained** for the location's
-  backup retention window. The control plane keeps a temporary tombstone until the window
-  expires and then purges them.
+  backup retention window and removed after it expires.
 - `true` - the service and all of its backups are removed immediately.
 
 ```terraform

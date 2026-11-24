@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     ametnes = {
-      source = "ametnes.com/cloud/ametnes"
+      source  = "ametnes.com/cloud/ametnes"
+      version = "~> 0.5"
     }
     random = {
       source  = "hashicorp/random"

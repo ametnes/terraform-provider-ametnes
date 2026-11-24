@@ -9,9 +9,7 @@ import (
 )
 
 // Load balancer capability/default and telemetry values shared with the
-// Ametnes Cloud console. See api.cloud.ametnes.com
-// (bin/cloud/services/metadata.py and bin/cloud/services/util.py) for the server
-// side contract; the console edits both through a single
+// Ametnes Cloud console. The console edits both through a single
 // `PUT metadata/locations` request.
 const (
 	DefaultLoadBalancerVisibility = "private"

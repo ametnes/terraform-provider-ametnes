@@ -173,11 +173,18 @@ func (c *Client) checkStatusDelete(ctx context.Context, projectID, resourceID in
 		defer ticker.Stop()
 
 		for {
-			resource, err := c.GetResource(projectID, resourceID)
+			// Read through the project resource list: it reflects the current
+			// lifecycle status even while a direct resource read can still
+			// report a stale one.
+			resource, err := c.GetResourceFromProject(projectID, resourceID)
 			switch {
+			case err == nil && resource == nil:
+				// The resource is no longer listed, so it no longer exists.
+				respChan <- Status{Success: true}
+				return
 			case err == nil && resource.Status == "DELETED":
-				// The control plane may keep deleted resources as tombstones,
-				// so a successful read can still mean the delete is complete.
+				// A DELETED resource no longer exists, even when the API keeps
+				// its record for the backup retention window.
 				respChan <- Status{Success: true}
 				return
 			case err == nil && resource.Status == "ERROR":

@@ -139,8 +139,7 @@ func resourceNetworkCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	config := networkSpecConfig(d)
 
-	// we add network as prefix for network resource as thats how
-	// server differentiates from other resources like service.
+	// Network resource kinds use a `network/` prefix.
 	prefixedKind := fmt.Sprintf("network/%s", kind)
 	resource := Resource{
 		Project:     projectID,

@@ -21,9 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Ametnes Cloud console edits through `PUT metadata/locations`.
 - New `UpdateLocation` client method that issues `PUT metadata/locations/{id}`.
 - `delete_backups` attribute on `ametnes_service`. When `true`, destroying the
-  service deletes its backups immediately (`?delete_backups=true`); the default
-  keeps the control-plane behaviour of retaining backups for the location's
-  retention window and leaving a temporary tombstone.
+  service deletes its backups immediately (`?delete_backups=true`); by default
+  the service's backups are retained for the location's backup retention window.
 - The `ametnes_location` data source exposes the location's load balancer
   capabilities/defaults and telemetry as read-only attributes.
 - Documentation explaining automatic load balancer management (distribution
@@ -44,15 +43,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also sent for `kind` changes, and the applied kind is read back into state.
 
 ### Fixed
-- `terraform destroy` no longer waits for the full delete timeout when the
-  control plane retains a deleted service as a tombstone. Delete polling now
-  succeeds on a `DELETED` status or a 404, retries transient server errors,
-  fails fast on permanent 4xx errors, and honours context cancellation.
+- `terraform destroy` now finishes as soon as the resource is `DELETED` or no
+  longer returned by the API. Delete polling previously relied on a single
+  resource read that could keep reporting `INITIALIZED` for a resource that was
+  already deleted, making destroy wait for the full delete timeout when
+  `delete_backups` was left at its `false` default.
+- `terraform destroy` no longer waits for the full delete timeout when the API
+  keeps a deleted service record for the backup retention window. Delete
+  polling now succeeds on a `DELETED` status or a 404, retries transient server
+  errors, fails fast on permanent 4xx errors, and honours context cancellation.
 - Deleting an already-deleted service is now a success, so `terraform destroy`
   is idempotent and no longer fails with `Resource id ... not found in project
   ...`. The same response during refresh drops the stale resource from state.
 - Refresh no longer drops a resource from state on a transient read error; only
-  a 404 (or a `DELETED` tombstone) removes it.
+  a 404 (or a `DELETED` status) removes it.
 - `ametnes_kinds` now queries the configured provider `host` with the provider
   credentials. It previously used a hardcoded test-environment base URL, which
   ignored `host`, `token`, `timeout` and `insecure`.

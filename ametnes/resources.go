@@ -47,6 +47,26 @@ func (c *Client) GetResource(projectId, id int) (*Resource, error) {
 	return &resource, nil
 }
 
+// GetResourceFromProject finds a resource in its project's resource list.
+//
+// It reports the resource's current lifecycle status and returns nil once the
+// resource is no longer present. Use it when the lifecycle status matters,
+// such as waiting for a delete to complete.
+func (c *Client) GetResourceFromProject(projectID, resourceID int) (*Resource, error) {
+	resources, err := c.GetResources(&Project{Id: projectID})
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range resources {
+		if resources[i].Id == resourceID {
+			return &resources[i], nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (c *Client) CreateResource(resource Resource) (*Resource, error) {
 	rb, err := json.Marshal(resource)
 	if err != nil {
@@ -100,8 +120,9 @@ func (c *Client) UpdateResource(resource Resource) (*Resource, error) {
 func (c *Client) DeleteResource(resource Resource, deleteBackups bool) error {
 	url := fmt.Sprintf("%s/projects/%d/resources/%d", c.HostURL, resource.Project, resource.Id)
 	if deleteBackups {
-		// Without this flag the control plane keeps the resource's backups for
-		// the configured retention window and retains a temporary tombstone.
+		// Without this flag the service's backups are retained for the
+		// location's backup retention window; the resource stays DELETED
+		// until that window expires.
 		url = fmt.Sprintf("%s?delete_backups=true", url)
 	}
 

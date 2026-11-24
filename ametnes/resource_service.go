@@ -92,8 +92,8 @@ Creates and manages a data service resource. All data service resources created 
 				Optional: true,
 				Default:  false,
 				Description: "Whether to delete the service's backups when it is destroyed. Defaults to `false`, " +
-					"which retains its backups for the location's backup retention window and leaves a temporary " +
-					"tombstone at the control plane. Set to `true` to remove the service and all of its backups immediately.",
+					"which retains its backups for the location's backup retention window before they are removed. " +
+					"Set to `true` to remove the service and all of its backups immediately.",
 			},
 			// computed
 			"network": {
@@ -183,8 +183,7 @@ func resourceServiceCreate(ctx context.Context, d *schema.ResourceData, m interf
 		alias = a.(string)
 	}
 
-	// we add service as prefix for service resource as thats how
-	// server differentiates from other resources like network.
+	// Service resource kinds use a `service/` prefix.
 	prefixedKind := fmt.Sprintf("service/%s", kind)
 	resource := Resource{
 		Project:     projectID,
@@ -280,8 +279,8 @@ func resourceServiceUpdate(ctx context.Context, d *schema.ResourceData, m interf
 
 		// A kind change is an in-place upgrade. The control plane validates the
 		// target against the current kind's catalog `upgrades` list and rolls
-		// the service forward with Helm. Service kinds are stored with a
-		// `service/` prefix, matching the create path.
+		// the service forward. Service kinds use a `service/` prefix, matching
+		// the create path.
 		kind := fmt.Sprintf("service/%s", d.Get("kind").(string))
 		description := ""
 		if desc, ok := d.GetOk("description"); ok {
@@ -386,7 +385,7 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	if resource.Status == "DELETED" {
-		// Deleted resources may be retained as tombstones; treat them as gone.
+		// A DELETED resource no longer exists; treat it as gone.
 		d.SetId("")
 		return nil
 	}
@@ -403,8 +402,8 @@ func resourceServiceOrNetworkRead(ctx context.Context, d *schema.ResourceData, m
 		d.Set("alias", resource.Alias)
 		d.Set("network", fmt.Sprintf("%d/%d", projectID, resource.Network))
 		// Record the applied kind so an in-place upgrade (or a change made
-		// outside Terraform) is reflected in state. The control plane stores
-		// service kinds with a `service/` prefix.
+		// outside Terraform) is reflected in state. Service kinds use a
+		// `service/` prefix.
 		d.Set("kind", strings.TrimPrefix(resource.Kind, "service/"))
 	}
 

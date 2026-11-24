@@ -26,6 +26,19 @@ func getMockClientForStatus(status string) (*Client, *httptest.Server) {
 			}
 			json.NewEncoder(w).Encode(resource)
 
+		case r.Method == "GET" && r.URL.Path == "/projects/1/resources":
+			json.NewEncoder(w).Encode(Resources{
+				Count: 1,
+				Items: []Resource{
+					{
+						Id:      1,
+						Project: 1,
+						Account: 100,
+						Status:  status,
+					},
+				},
+			})
+
 		case r.Method == "POST" && r.URL.Path == "/projects/1/resources":
 			var resource Resource
 			json.NewDecoder(r.Body).Decode(&resource)
@@ -202,7 +215,7 @@ func TestCheckStatusDelete_ReturnsErrorOnErrorState(t *testing.T) {
 	}
 }
 
-func TestCheckStatusDelete_ReturnsSuccessOnDeletedTombstone(t *testing.T) {
+func TestCheckStatusDelete_ReturnsSuccessOnDeletedStatus(t *testing.T) {
 	client, server := getMockClientForStatus("DELETED")
 	defer server.Close()
 
@@ -211,6 +224,85 @@ func TestCheckStatusDelete_ReturnsSuccessOnDeletedTombstone(t *testing.T) {
 	select {
 	case res := <-respChan:
 		assert.True(t, res.Success, "expected Success on DELETED status")
+		assert.NoError(t, res.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsSuccessWhenSingleReadIsStale(t *testing.T) {
+	// The single-resource read can keep reporting INITIALIZED for a resource
+	// that is already DELETED. Delete polling must use the project resource
+	// list instead.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch {
+		case r.Method == "GET" && r.URL.Path == "/projects/1/resources/1":
+			json.NewEncoder(w).Encode(Resource{
+				Id:      1,
+				Project: 1,
+				Account: 100,
+				Status:  "INITIALIZED",
+			})
+		case r.Method == "GET" && r.URL.Path == "/projects/1/resources":
+			json.NewEncoder(w).Encode(Resources{
+				Count: 1,
+				Items: []Resource{
+					{
+						Id:      1,
+						Project: 1,
+						Account: 100,
+						Status:  "DELETED",
+					},
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "not found"})
+		}
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{
+		Type:     Basic,
+		Username: &username,
+		Token:    "test-token",
+	})
+	assert.NoError(t, err)
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "a stale INITIALIZED status must not mask a DELETED resource")
+		assert.NoError(t, res.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for checkStatusDelete to return")
+	}
+}
+
+func TestCheckStatusDelete_ReturnsSuccessWhenResourceIsNotListed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(Resources{Count: 0, Items: []Resource{}})
+	}))
+	defer server.Close()
+
+	username := "test-user"
+	client, err := NewClient(server.URL, Token{
+		Type:     Basic,
+		Username: &username,
+		Token:    "test-token",
+	})
+	assert.NoError(t, err)
+
+	respChan := client.checkStatusDelete(context.Background(), 1, 1)
+
+	select {
+	case res := <-respChan:
+		assert.True(t, res.Success, "expected Success when the resource is not listed")
 		assert.NoError(t, res.Error)
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for checkStatusDelete to return")

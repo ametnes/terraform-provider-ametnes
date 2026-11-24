@@ -31,7 +31,7 @@ To move to a kind that is not on the upgrade path, replace the resource explicit
 
 ## Deleting a service and its backups
 
-`delete_backups` is an **optional** argument. It defaults to `false`, which matches the control-plane default: `terraform destroy` removes the service but **retains its backups** for the location's backup retention window. The resource is kept as a temporary tombstone until the window expires, and the backups are purged then.
+`delete_backups` is an **optional** argument. It defaults to `false`, which matches the control-plane default: `terraform destroy` removes the service but **retains its backups** for the location's backup retention window. The backups are retained for that window and then removed.
 
 Set the optional `delete_backups` argument to `true` to remove the service and all of its backups immediately:
 
@@ -172,7 +172,7 @@ output "service_connections" {
 - `alias` (String) An optional alias for your data service resource.
 - `capacity` (Block List, Max: 1) Capacity specs for your data service resource. Only `storage` is configurable. (see [below for nested schema](#nestedblock--capacity))
 - `config` (Map of String) Configuration details for your data service resource. Commonly used keys include `admin.email`, `admin.user`, `admin.password`, `architecture`, `public.visible` (`"true"` requests a public load balancer, default `"false"`), and service-specific configuration. On-premises: visibility is irrelevant, because every load balancer is provisioned inside your own environment.
-- `delete_backups` (Boolean) Whether to delete the service's backups when it is destroyed. Defaults to `false`, which retains its backups for the location's backup retention window and leaves a temporary tombstone at the control plane. Set to `true` to remove the service and all of its backups immediately.
+- `delete_backups` (Boolean) Whether to delete the service's backups when it is destroyed. Defaults to `false`, which retains its backups for the location's backup retention window before they are removed. Set to `true` to remove the service and all of its backups immediately.
 - `description` (String) The description of your data service resource.
 - `network` (String, Optional) Network resource your data service resource will be attached to. If omitted, the control plane manages a load balancer for the service automatically.
 
